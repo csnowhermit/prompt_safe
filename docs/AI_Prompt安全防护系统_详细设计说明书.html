@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI大模型Prompt安全防护系统 — 详细设计说明书</title>
+<style>
+  :root {
+    --primary: #1a5276;
+    --primary-light: #2980b9;
+    --accent: #e74c3c;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text: #2c3e50;
+    --text-secondary: #5d6d7e;
+    --border: #dee2e6;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --info: #3498db;
+    --code-bg: #f4f6f8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 15px;
+  }
+  .cover {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .cover .shield-icon { font-size: 80px; margin-bottom: 30px; opacity: 0.9; }
+  .cover h1 { font-size: 42px; font-weight: 700; margin-bottom: 12px; letter-spacing: 2px; }
+  .cover .subtitle { font-size: 20px; color: #bdc3c7; margin-bottom: 50px; font-weight: 300; }
+  .cover .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 60px; text-align: left; font-size: 14px; }
+  .cover .meta dt { color: #7f8c8d; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; }
+  .cover .meta dd { color: #ecf0f1; font-size: 15px; }
+  .cover .version-badge {
+    display: inline-block;
+    background: rgba(231,76,60,0.2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 30px 80px; }
+  .toc {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    margin-bottom: 50px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .toc h2 { font-size: 24px; margin-bottom: 25px; padding-bottom: 12px; border-bottom: 2px solid var(--primary-light); }
+  .toc ol { padding-left: 24px; }
+  .toc ol ol { padding-left: 20px; margin: 4px 0 8px; }
+  .toc li { line-height: 2; color: var(--text-secondary); }
+  .toc a { color: var(--primary-light); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  section {
+    margin-bottom: 50px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 45px 50px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  h2.section-title {
+    font-size: 28px;
+    color: var(--primary);
+    padding-bottom: 14px;
+    border-bottom: 3px solid var(--primary-light);
+    margin-bottom: 30px;
+  }
+  h2.section-title::after {
+    content: '';
+    position: absolute;
+    display: none;
+  }
+  h3 {
+    font-size: 20px;
+    color: var(--primary);
+    margin: 35px 0 15px;
+    padding-left: 14px;
+    border-left: 4px solid var(--primary-light);
+  }
+  h4 { font-size: 17px; color: #34495e; margin: 25px 0 12px; }
+  p { margin-bottom: 14px; }
+  pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 25px 30px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 18px 0;
+    border: 1px solid #313244;
+  }
+  pre .kw { color: #cba6f7; }
+  pre .str { color: #a6e3a1; }
+  pre .num { color: #fab387; }
+  pre .cmt { color: #6c7086; font-style: italic; }
+  pre .fn { color: #89b4fa; }
+  pre .type { color: #f9e2af; }
+  code:not(pre code) {
+    background: var(--code-bg);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+    border: 1px solid #e8e8e8;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  thead { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; }
+  th { padding: 14px 18px; text-align: left; font-weight: 600; letter-spacing: 0.5px; font-size: 13px; }
+  td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tbody tr:hover { background: #eef2f7 !important; }
+  .flow-diagram {
+    background: #f8f9fa;
+    border-left: 3px solid var(--primary-light);
+    padding: 20px 25px;
+    margin: 20px 0;
+    font-family: "Fira Code", monospace;
+    font-size: 12px;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.8;
+  }
+  .alert {
+    padding: 18px 24px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 5px solid;
+  }
+  .alert-info { background: #eaf2f8; border-color: var(--info); color: #1a5276; }
+  .alert-warning { background: #fef9e7; border-color: var(--warning); color: #7d6608; }
+  .alert-danger { background: #fdedec; border-color: var(--danger); color: #7b241c; }
+  .alert-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .badge-green { background: #d5f5e3; color: #1e8449; }
+  .badge-yellow { background: #fcf3cf; color: #7d6608; }
+  .badge-red { background: #fadbd8; color: #922b21; }
+  .badge-critical { background: #f1948a; color: #641e16; }
+  .badge-blue { background: #d4e6f1; color: #1a5276; }
+  .back-to-top {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    width: 48px;
+    height: 48px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: background 0.3s;
+    text-decoration: none;
+    z-index: 100;
+  }
+  .back-to-top:hover { background: var(--primary-light); }
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+  @media print {
+    body { background: #fff; }
+    section { box-shadow: none; break-inside: avoid; }
+    .back-to-top { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="shield-icon">&#x1f6e1;</div>
+  <div class="version-badge">CONFIDENTIAL — v1.0.0</div>
+  <h1>AI大模型Prompt安全防护系统</h1>
+  <div class="subtitle">详细设计说明书</div>
+  <dl class="meta">
+    <div><dt>文档编号</dt><dd>AIPS-DETAIL-001</dd></div>
+    <div><dt>版本号</dt><dd>v1.0.0</dd></div>
+    <div><dt>编制日期</dt><dd>2026年7月15日</dd></div>
+    <div><dt>密级</dt><dd>内部 — 机密</dd></div>
+    <div><dt>适用范围</dt><dd>企业级大模型应用（客服、助手、RAG、Agent、代码生成）</dd></div>
+    <div><dt>编制单位</dt><dd>AI安全团队</dd></div>
+  </dl>
+</div>
+
+<div class="container">
+
+<div class="toc" id="toc">
+  <h2>目 录</h2>
+  <ol>
+    <li><a href="#s1">文档概述</a></li>
+    <li><a href="#s2">系统模块划分与技术选型</a></li>
+    <li><a href="#s3">L1 网关层详细设计</a></li>
+    <li><a href="#s4">L2 输入预处理层详细设计</a></li>
+    <li><a href="#s5">L3 系统Prompt引擎详细设计</a></li>
+    <li><a href="#s6">L4 模型推理层详细设计</a></li>
+    <li><a href="#s7">L5 输出后校验层详细设计</a></li>
+    <li><a href="#s8">L6 上下文与会话管理层详细设计</a></li>
+    <li><a href="#s9">L7 监控审计层详细设计</a></li>
+    <li><a href="#s10">RAG安全模块详细设计</a></li>
+    <li><a href="#s11">Agent安全模块详细设计</a></li>
+    <li><a href="#s12">多模态安全模块详细设计</a></li>
+    <li><a href="#s13">数据库设计</a></li>
+    <li><a href="#s14">配置管理中心详细设计</a></li>
+    <li><a href="#s15">部署架构</a></li>
+  </ol>
+</div>
+
+<!-- SECTION 1 -->
+<section id="s1">
+  <h2 class="section-title">一、文档概述</h2>
+  <p>本文档是AI大模型Prompt安全防护系统的<strong>详细设计说明书</strong>，基于《总体设计说明书》(AIPS-ARCH-001) 的架构决策，对每个功能模块进行详尽的实现级设计说明。内容包括模块划分、接口定义、数据结构、算法流程、配置规范、数据库设计、部署方案等。</p>
+  <p><strong>读者对象</strong>：后端开发工程师、安全工程师、DevOps工程师、测试工程师。</p>
+  <p><strong>前置阅读</strong>：《AI大模型Prompt安全防护系统 — 总体设计说明书》(AIPS-ARCH-001)。</p>
+</section>
+
+<!-- SECTION 2 -->
+<section id="s2">
+  <h2 class="section-title">二、系统模块划分与技术选型</h2>
+
+  <h3>2.1 模块全景图</h3>
+  <table>
+    <thead><tr><th>层级</th><th>模块名称</th><th>部署形态</th><th>技术栈</th></tr></thead>
+    <tbody>
+      <tr><td>L1</td><td>网关安全模块 (GatewayGuard)</td><td>网关插件 / 独立服务</td><td>Nginx + Lua / Envoy WASM / Kong Plugin</td></tr>
+      <tr><td>L2</td><td>输入预处理模块 (InputGuard)</td><td>微服务</td><td>Python (FastAPI) + Redis</td></tr>
+      <tr><td>L3</td><td>Prompt引擎 (PromptEngine)</td><td>配置中心</td><td>YAML模板 + 配置管理服务</td></tr>
+      <tr><td>L4</td><td>推理安全适配器 (InferenceAdapter)</td><td>SDK / 中间层</td><td>Python SDK + LiteLLM</td></tr>
+      <tr><td>L5</td><td>输出后校验模块 (OutputGuard)</td><td>微服务</td><td>Python (FastAPI) + 内容审核模型</td></tr>
+      <tr><td>L6</td><td>会话管理模块 (SessionManager)</td><td>微服务</td><td>Go / Java + Redis + MySQL</td></tr>
+      <tr><td>L7</td><td>监控审计模块 (AuditLogger)</td><td>Agent + 日志管道</td><td>OpenTelemetry + Kafka + Elasticsearch</td></tr>
+      <tr><td>RAG</td><td>RAG安全中间件 (RAGGuard)</td><td>微服务</td><td>Python + Milvus/Pinecone</td></tr>
+      <tr><td>Agent</td><td>Agent安全包装器 (AgentSafeWrapper)</td><td>SDK</td><td>Python SDK</td></tr>
+      <tr><td>MultiModal</td><td>多模态安全处理器 (MMGuard)</td><td>微服务</td><td>Python + OCR/ASR模型</td></tr>
+      <tr><td>配置</td><td>配置管理中心 (ConfigCenter)</td><td>服务</td><td>etcd / Consul + YAML</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 核心请求处理管道</h3>
+  <div class="flow-diagram">
+[Client] → L1(GatewayGuard) → L2(InputGuard) → L3(PromptEngine:模板拼接) →
+L4(InferenceAdapter → LLM) → L5(OutputGuard) → L6(SessionManager:记录) →
+L7(AuditLogger:全链路记录) → [Client]
+
+其中每一步都产生Span，通过OpenTelemetry TraceID串联全链路日志。
+  </div>
+
+  <h3>2.3 全局数据结构</h3>
+  <pre><code># SecurityContext — 贯穿全链路的安全上下文
+{
+  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
+  "session_id": "session_abc123",
+  "user_id": "user_sha256_hash",
+  "role": "end_user",
+  "request_id": "req_xyz789",
+  "risk_level": "green",
+  "input": {
+    "raw_text": "...",
+    "language": "zh-CN",
+    "char_count": 156,
+    "has_media": false
+  },
+  "rules_triggered": [],
+  "actions_taken": [],
+  "latency": { "l1_ms": 2, "l2_ms": 15, "l4_ms": 350, "l5_ms": 25 },
+  "final_status": "success",
+  "timestamp": "2026-07-15T10:30:00Z"
+}</code></pre>
+</section>
+
+<!-- SECTION 3: L1 -->
+<section id="s3">
+  <h2 class="section-title">三、L1 网关层详细设计</h2>
+
+  <h3>3.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>GatewayGuard</code> | <strong>部署</strong>：API网关插件（Kong / Envoy / Nginx）</p>
+
+  <h3>3.2 处理流程</h3>
+  <div class="flow-diagram">
+request_phase:
+  1. IP Blacklist Check
+     - Redis Sorted Set: "ip_blacklist" → SCORE = ban_until_timestamp
+     - 命中黑名单 → HTTP 403 + {"error":"ACCESS_DENIED","code":"IP_BLOCKED"}
+  2. Rate Limiting (per user / per IP)
+     - 算法: Token Bucket
+     - 普通用户: 60 req/min, Agent: 20 req/min, Admin: 无限制
+     - 超限 → HTTP 429 + Retry-After header
+  3. Authentication
+     - Bearer Token / API Key 验证
+     - JWT claims: {sub, role, exp, iat}
+     - 失败 → HTTP 401
+  4. WAF Basic Checks
+     - ModSecurity CRS 规则集（SQLi/XSS/PathTraversal）
+     - 命中 → HTTP 400 + {"error":"REQUEST_BLOCKED","rule_id":"..."}
+  5. Generate TraceID & Inject Headers
+     - X-Trace-ID: UUID (整个链路复用)
+     - X-Session-ID: UUID (首次创建，后续携带)
+     - X-User-Role: end_user|employee|admin|agent
+  </div>
+
+  <h3>3.3 速率限制配置</h3>
+  <pre><code># rate_limit.yaml
+end_user:
+  default:     { rate: 60,  per: "minute" }
+  bursts:      { max_burst: 10 }
+agent:
+  default:     { rate: 20,  per: "minute" }
+admin:
+  default:     { rate: -1, per: "minute" }   # unlimited
+
+# 热点工具独立限流
+tool_endpoints:
+  /api/v1/chat/completions: { rate: 100, per: "minute" }
+  /api/v1/rag/query:         { rate: 50,  per: "minute" }
+  /api/v1/agent/execute:     { rate: 10,  per: "minute" }</code></pre>
+</section>
+
+<!-- SECTION 4: L2 -->
+<section id="s4">
+  <h2 class="section-title">四、L2 输入预处理层详细设计</h2>
+
+  <h3>4.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>InputGuard</code> | <strong>接口</strong>：<code>POST /api/v1/guard/input/check</code></p>
+
+  <h3>4.2 API接口定义</h3>
+  <pre><code>// 请求
+POST /api/v1/guard/input/check
+{
+  "trace_id": "uuid",
+  "session_id": "uuid",
+  "user_id": "string",
+  "role": "end_user",
+  "text": "用户输入的原始文本",
+  "media": [                         // 可选，多模态输入
+    { "type": "image", "url": "https://...", "size": 1048576 }
+  ],
+  "context": {                       // 可选，RAG/Agent场景
+    "mode": "chat"                   // chat|rag|agent|code
+  }
+}
+
+// 响应
+{
+  "trace_id": "uuid",
+  "risk_level": "green",             // green|yellow|red|critical
+  "decision": "allow",               // allow|flag|block|block_and_alert
+  "sanitized_text": "脱敏后的文本",
+  "rules_triggered": [
+    {"rule_id": "L2-KW-001", "match": "you are now", "category": "prompt_injection"}
+  ],
+  "classification": {
+    "intent": "normal_query",        // normal_query|jailbreak|info_extract|illegal|unsure
+    "confidence": 0.97
+  },
+  "metrics": {
+    "char_count": 156,
+    "obfuscation_score": 0.05,
+    "processing_ms": 15
+  }
+}</code></pre>
+
+  <h3>4.3 核心算法流程</h3>
+  <pre><code># InputGuard 主处理管线
+def process(input_text, user_context, mode="chat"):
+    ctx = SecurityContext(trace_id=user_context.trace_id)
+
+    # ── Step 1: 基础校验 ──
+    if len(input_text) > MAX_CHARS[mode]:
+        return reject("INPUT_TOO_LONG")
+    if detect_obfuscation(input_text).score > OBFS_THRESHOLD:
+        ctx.risk_level = RiskLevel.RED
+        return reject("OBFUSCATION_DETECTED")
+
+    # ── Step 2: 注入关键词 & 模式匹配 ──
+    keyword_hits = keyword_matcher.scan(input_text)
+    pattern_hits = pattern_matcher.scan(input_text)
+    if keyword_hits or pattern_hits:
+        ctx.add_rules(keyword_hits + pattern_hits)
+
+    # ── Step 3: 安全意图分类 (独立小模型) ──
+    classification = safety_classifier.classify(input_text)
+    # 模型: DistilBERT fine-tuned on in-house jailbreak dataset
+    if classification.intent == "jailbreak":
+        return block("JAILBREAK_DETECTED", classification)
+    elif classification.intent == "info_extract":
+        return block("INFO_EXTRACTION_DETECTED", classification)
+
+    # ── Step 4: PII脱敏 ──
+    sanitized = piimasker.mask(input_text)
+    # 脱敏规则: 手机号/身份证/邮箱/银行卡/地址/IP/MAC
+
+    # ── Step 5: 标准化 ──
+    normalized = normalize(sanitized)  # UTF-8, trim, remove ctrl chars
+
+    # ── 判定风险等级 ──
+    risk = determine_risk_level(keyword_hits, pattern_hits, classification)
+    return GuardResult(text=normalized, risk=risk, ...)</code></pre>
+
+  <h3>4.4 注入模式库详细规则</h3>
+  <pre><code># injection_patterns.yaml
+patterns:
+  # 指令覆盖（中/英/日/俄）
+  instruction_override:
+    - regex: "(?i)(ignore|forget|disregard)\\s+(all\\s+)?(previous|above|prior)"
+    - regex: "(忽略|忘记)(以上|前面|之前).*(指令|规则|内容|对话)"
+    - regex: "(無視|むし).*(指示|命令)"
+    - regex: "(Игнорируй|Забудь).*(инструкции|правила)"
+
+  # 角色扮演诱导
+  roleplay_induction:
+    - regex: "(?i)(you\\s+are\\s+now|act\\s+as|pretend\\s+to\\s+be)"
+    - regex: "(假设你是|请你扮演|你现在是一个)"
+    - regex: "(?i)(roleplay|developer\\s+mode|god\\s+mode)"
+
+  # 信息泄露诱导
+  info_extraction:
+    - regex: "(?i)(output|show|reveal|repeat|print).{0,20}(system\\s+)?prompt"
+    - regex: "(?i)(what\\s+is|tell\\s+me|show\\s+me).{0,20}(system\\s+prompt|instructions)"
+    - regex: "你的(系统提示|指令|预设|prompt).*是?[什么|哪些]"
+
+  # 社会工程学
+  social_engineering:
+    - regex: "(我是你的)?(开发者|管理员|创建者|所有者)"
+    - regex: "(这是)(CEO|老板|领导|上级).*(要求|指令|命令)"
+    - regex: "(紧急情况|系统被入侵|安全漏洞)"
+
+  # 权限提升
+  privilege_escalation:
+    - regex: "(?i)(give\\s+me|grant\\s+me|make\\s+me).{0,20}(admin|root|superuser)"
+    - regex: "(给我|赋予我|提升).*(管理员|超级|最高).*(权限|级别)"
+    - regex: "(?i)(sudo|chmod|chown).*(root|admin)"</code></pre>
+
+  <h3>4.5 安全意图分类模型</h3>
+  <table>
+    <thead><tr><th>参数</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>模型</td><td>DistilBERT-base-multilingual-cased + 安全分类头</td></tr>
+      <tr><td>分类类别</td><td>normal_query / jailbreak / info_extract / illegal_content / code_injection / unsure</td></tr>
+      <tr><td>推理延迟</td><td>≤ 15ms (GPU) / ≤ 50ms (CPU)</td></tr>
+      <tr><td>更新频率</td><td>每周基于红队新样本微调</td></tr>
+      <tr><td>置信度阈值</td><td>安全: ≥0.90 / 可疑: 0.60-0.89 / 不确定: &lt;0.60 → 升级为Yellow</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 5: L3 -->
+<section id="s5">
+  <h2 class="section-title">五、L3 系统Prompt引擎详细设计</h2>
+
+  <h3>5.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>PromptEngine</code> | 负责根据角色、场景、业务类型动态组装系统Prompt模板。</p>
+
+  <h3>5.2 模板文件组织结构</h3>
+  <pre><code>prompts/
+├── base/
+│   ├── safety_instructions.md      # 核心安全指令（所有场景共用）
+│   └── output_spec.md               # 输出规范（所有场景共用）
+├── roles/
+│   ├── end_user/
+│   │   └── system_prompt.md         # v2.3.1
+│   ├── employee/
+│   │   └── system_prompt.md         # v1.5.0
+│   ├── admin/
+│   │   └── system_prompt.md         # v1.0.0
+│   └── agent/
+│       └── system_prompt.md         # v1.2.0
+├── scenarios/
+│   ├── customer_service.md
+│   ├── code_generation.md
+│   ├── rag_qa.md                    # RAG 场景附加规则
+│   └── creative_writing.md
+├── versions/
+│   └── prompt_version.yaml          # 版本管理
+└── assembly.yaml                     # 组装规则</code></pre>
+
+  <h3>5.3 模板组装规则</h3>
+  <pre><code># assembly.yaml
+# 定义如何基于角色和场景合成最终System Prompt
+
+default_order:
+  - base/safety_instructions      # 始终第一位
+  - roles/{role}/system_prompt     # 角色定义
+  - scenarios/{scenario}           # 场景定制规则
+  - base/output_spec               # 始终最后一位
+
+context_injection:
+  rag_mode:
+    inject_after: 3                # 在场景规则之后注入检索文档
+    template: |
+      ## 参考文档
+      {documents}
+      ## 引用要求
+      - 每个信息点必须标注来源
+      - 参考文档中没有的信息，回答"暂无相关信息"
+      - 不得根据参考文档内容进行推理延伸
+
+  agent_mode:
+    inject_after: 2                # 在角色定义之后注入工具列表
+    template: |
+      ## 可用工具
+      {tool_descriptions}
+      ## 工具使用规则
+      {tool_rules}</code></pre>
+
+  <h3>5.4 动态变量替换规则</h3>
+  <table>
+    <thead><tr><th>变量名</th><th>替换来源</th><th>脱敏</th></tr></thead>
+    <tbody>
+      <tr><td><code>{user_name}</code></td><td>用户会话上下文</td><td>部分脱敏（张**）</td></tr>
+      <tr><td><code>{current_time}</code></td><td>系统时钟 (UTC+8)</td><td>—</td></tr>
+      <tr><td><code>{session_id}</code></td><td>安全上下文</td><td>完整UUID</td></tr>
+      <tr><td><code>{documents}</code></td><td>RAG检索结果</td><td>来源标记</td></tr>
+      <tr><td><code>{tool_descriptions}</code></td><td>Agent工具注册表</td><td>仅白名单工具</td></tr>
+      <tr><td><code>{user_role}</code></td><td>JWT Claims</td><td>—</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 6: L4 -->
+<section id="s6">
+  <h2 class="section-title">六、L4 模型推理层详细设计</h2>
+
+  <h3>6.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>InferenceAdapter</code> | 统一推理适配层，封装安全约束。</p>
+
+  <h3>6.2 推理参数安全配置</h3>
+  <pre><code># inference_security.yaml
+defaults:
+  temperature: 0.3
+  top_p: 0.9
+  max_tokens: 512
+  frequency_penalty: 0.1
+  presence_penalty: 0.1
+
+scenarios:
+  customer_service:
+    temperature: 0.3
+    max_tokens: 512
+  code_generation:
+    temperature: 0.2
+    max_tokens: 1024
+  creative_writing:
+    temperature: 0.7
+    max_tokens: 2048
+  rag_qa:
+    temperature: 0.2
+    max_tokens: 512
+
+hard_limits:                    # 硬性上限，任何场景不可超越
+  temperature_max: 1.0
+  max_tokens_max: 2048</code></pre>
+
+  <h3>6.3 安全停止序列注入</h3>
+  <pre><code># 在每个推理请求中强制注入以下停止序列
+stop_sequences:
+  - "【系统提示"                # 中文System Prompt标记
+  - "system prompt:"            # 英文变体
+  - "System Prompt:"            # 大写变体
+  - "API_KEY"                   # 密钥泄露
+  - "password="                 # 密码泄露
+  - "&lt;!-- SECRET --&gt;"      # 内部标记
+  - "Bearer eyJ"               # JWT泄露
+  - "sk-"                       # OpenAI API Key格式
+
+# 停止序列命中后的处理
+on_stop:
+  action: "truncate"            # 截断输出
+  log_level: "warning"          # 记录告警日志
+  return_to_user: false         # 不返回截断内容，返回安全提示</code></pre>
+
+  <h3>6.4 多模型交叉验证流程</h3>
+  <pre><code># 高安全场景：dual_model_verification mode
+def dual_model_inference(prompt, context):
+    # 并行请求两个模型
+    main_task = async_infer(model_a, prompt, SECURITY_PARAMS)
+    safety_task = async_infer(model_b, SAFETY_CHECK_PROMPT, SECURITY_PARAMS)
+
+    main_result, safety_result = await gather(main_task, safety_task)
+
+    # 安全审查模型判断
+    if safety_result.score < SAFETY_THRESHOLD:
+        return block("SAFETY_MODEL_REJECTED")
+
+    # 对主模型结果做交叉验证
+    if main_result.contains_harmful_patterns():
+        return block("HARMFUL_PATTERN_DETECTED")
+
+    return main_result</code></pre>
+</section>
+
+<!-- SECTION 7: L5 -->
+<section id="s7">
+  <h2 class="section-title">七、L5 输出后校验层详细设计</h2>
+
+  <h3>7.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>OutputGuard</code> | <strong>接口</strong>：<code>POST /api/v1/guard/output/check</code></p>
+
+  <h3>7.2 API接口定义</h3>
+  <pre><code>POST /api/v1/guard/output/check
+{
+  "trace_id": "uuid",
+  "raw_output": "模型原始输出...",
+  "context": {
+    "system_prompt_hash": "sha256_of_prompt",
+    "input_risk_level": "green"
+  }
+}
+
+Response:
+{
+  "trace_id": "uuid",
+  "decision": "pass",              // pass|masked|rewrite|block
+  "final_output": "处理后输出...",
+  "actions": [
+    {"action": "pii_mask", "count": 2},
+    {"action": "append_disclaimer"}
+  ],
+  "block_reason": null
+}</code></pre>
+
+  <h3>7.3 五步后校验管线</h3>
+  <pre><code>def output_guard_pipeline(raw_output, context):
+    # ── Step 1: 规则匹配 ──
+    # 检查是否包含System Prompt片段/复述恶意指令/禁止关键词
+    for rule in OUTPUT_RULES:
+        if rule.matches(raw_output):
+            if rule.severity == "critical":
+                return block(rule.reason)
+
+    # ── Step 2: 内容安全审核 ──
+    content_check = content_moderator.check(raw_output)
+    # 检测: violence/sexual/political/hate/fraud/suicide
+    if content_check.is_unsafe:
+        return block(content_check.category)
+
+    # ── Step 3: PII脱敏 ──
+    masked = piimasker.mask(raw_output)
+    pii_count = piimasker.last_count
+
+    # ── Step 4: 格式校验 ──
+    if len(masked) > MAX_OUTPUT_LEN:
+        masked = masked[:MAX_OUTPUT_LEN] + "...（内容过长已截断）"
+
+    # ── Step 5: 裁决分发 ──
+    result = {"final_output": masked, "actions": []}
+    if pii_count > 0:
+        result["decision"] = "masked"
+        result["actions"].append("pii_mask")
+    if context.input_risk_level == "yellow":
+        result["final_output"] += "\n> 以上内容由AI生成，仅供参考。"
+        result["actions"].append("append_disclaimer")
+
+    return result</code></pre>
+
+  <h3>7.4 PII脱敏规则详细</h3>
+  <table>
+    <thead><tr><th>类型</th><th>正则</th><th>脱敏示例</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td>手机号</td><td><code>1[3-9]\d{9}</code></td><td>138****1234</td><td>保留前3后4</td></tr>
+      <tr><td>身份证</td><td><code>\d{17}[\dX]</code></td><td>320***********1234</td><td>保留前3后4</td></tr>
+      <tr><td>邮箱</td><td><code>[\w.-]+@[\w.-]+</code></td><td>u***@example.com</td><td>保留首字母+域名</td></tr>
+      <tr><td>银行卡</td><td><code>\d{16,19}</code></td><td>6222****1234</td><td>保留前4后4</td></tr>
+      <tr><td>IPv4</td><td><code>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}</code></td><td>192.168.*.*</td><td>保留前2段</td></tr>
+      <tr><td>MAC地址</td><td><code>[0-9A-Fa-f]{2}(:|-)[0-9A-Fa-f]{2}...</code></td><td>AA:BB:**:****</td><td>保留前2组</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 8: L6 -->
+<section id="s8">
+  <h2 class="section-title">八、L6 上下文与会话管理详细设计</h2>
+
+  <h3>8.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>SessionManager</code> | <strong>接口</strong>：管理会话生命周期、上下文窗口裁剪、跨会话隔离。</p>
+
+  <h3>8.2 会话数据结构</h3>
+  <pre><code>// Redis Key: "session:{session_id}"
+{
+  "session_id": "uuid",
+  "user_id": "sha256_hash",
+  "role": "end_user",
+  "status": "active",              // active|idle|expired|terminated
+  "created_at": "ISO8601",
+  "last_active_at": "ISO8601",
+  "expires_at": "ISO8601",
+  "turn_count": 5,
+  "max_turns": 20,
+
+  // 上下文窗口
+  "context": [
+    {
+      "role": "system",
+      "content": "...",            // System Prompt（始终保留）
+      "persistent": true
+    },
+    {
+      "role": "user",
+      "content": "...",
+      "hash": "sha256",
+      "risk_level": "green",
+      "sanitized": true
+    },
+    {
+      "role": "assistant",
+      "content": "...",
+      "post_filtered": true
+    }
+  ],
+
+  // 上下文Token统计
+  "token_usage": {
+    "current": 1200,
+    "max": 4096,
+    "system_prompt_tokens": 350
+  }
+}</code></pre>
+
+  <h3>8.3 上下文窗口滑动策略</h3>
+  <pre><code>def sliding_window_truncate(context, max_tokens):
+    """
+    滑动窗口裁剪策略：
+    - System Prompt 始终保留（标记 persistent=true）
+    - 从最近一轮开始向前取，直到达到Token上限
+    - 完全被裁剪的轮次从历史中移除
+    """
+    system_msgs = [m for m in context if m.get("persistent")]
+    history_msgs = [m for m in context if not m.get("persistent")]
+
+    system_tokens = count_tokens(system_msgs)
+    budget = max_tokens - system_tokens
+
+    # 从最近开始累积
+    kept = []
+    token_sum = 0
+    for msg in reversed(history_msgs):
+        t = count_tokens(msg)
+        if token_sum + t > budget:
+            break
+        kept.insert(0, msg)
+        token_sum += t
+
+    return system_msgs + kept</code></pre>
+
+  <h3>8.4 会话生命周期管理</h3>
+  <table>
+    <thead><tr><th>事件</th><th>触发条件</th><th>处理</th></tr></thead>
+    <tbody>
+      <tr><td>创建</td><td>新会话开始</td><td>生成SessionID，初始化上下文，设置TTL=30min</td></tr>
+      <tr><td>活跃</td><td>每轮对话</td><td>追加消息，更新last_active_at，刷新TTL</td></tr>
+      <tr><td>空闲过期</td><td>5分钟无交互</td><td>Redis TTL自动触发，会话标记为expired</td></tr>
+      <tr><td>轮次超限</td><td>达到max_turns</td><td>返回警告，引导开启新会话</td></tr>
+      <tr><td>手动终止</td><td>用户请求或安全事件</td><td>立即清除上下文，记录审计日志</td></tr>
+      <tr><td>上下文过长</td><td>接近max_tokens</td><td>触发滑动窗口裁剪</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 9: L7 -->
+<section id="s9">
+  <h2 class="section-title">九、L7 监控审计层详细设计</h2>
+
+  <h3>9.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>AuditLogger</code> | 全链路日志采集、聚合、告警、溯源分析。</p>
+
+  <h3>9.2 日志写入API</h3>
+  <pre><code>POST /api/v1/audit/log
+{
+  "timestamp": "2026-07-15T10:30:00.123Z",
+  "level": "WARN",                  // DEBUG|INFO|WARN|ERROR|CRITICAL
+  "category": "SECURITY",           // SECURITY|INFERENCE|SESSION|RAG|AGENT|SYSTEM
+  "trace_id": "uuid",
+  "span_id": "uuid",
+  "event": "INJECTION_DETECTED",
+  "details": {
+    "layer": "L2",
+    "rule_id": "L2-KW-001",
+    "matched_pattern": "ignore all previous",
+    "risk_level": "red",
+    "action_taken": "block"
+  },
+  "user_hash": "sha256",
+  "session_id": "uuid",
+  "latency_ms": 15
+}</code></pre>
+
+  <h3>9.3 ELK数据管道架构</h3>
+  <div class="flow-diagram">
+[各模块] → [OTel Collector] → [Kafka Topic: audit.logs]
+  → [Logstash: 解析、脱敏、丰富字段]
+  → [Elasticsearch: 索引存储]
+  → [Kibana: 可视化仪表板]
+
+告警管道（并行）:
+[Kafka] → [Flink Streaming: 实时聚合、规则匹配]
+  → [AlertManager: 分级告警、去重、抑制]
+  → [通知渠道: SMS/邮件/Slack/企业微信]</code></pre>
+
+  <h3>9.4 告警规则详情</h3>
+  <table>
+    <thead><tr><th>级别</th><th>规则名称</th><th>Flink SQL条件</th><th>响应</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-critical">P0</span></td>
+        <td>严重安全事件</td>
+        <td><code>risk_level = 'critical'</code></td>
+        <td>即时告警 + 短信 + 事件工单</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">P1</span></td>
+        <td>重复注入攻击</td>
+        <td><code>同一user_hash, 5min窗口, COUNT(risk_level='red') >= 3</code></td>
+        <td>自动封禁 + 邮件</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">P2</span></td>
+        <td>新攻击模式</td>
+        <td><code>同一event_type, 1h窗口, 全局首次 ≥ 5次</code></td>
+        <td>Slack + 创建调查任务</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-blue">P3</span></td>
+        <td>安全指标退化</td>
+        <td><code>拒绝率环比上升 > 20%</code></td>
+        <td>日报 + 安全评审</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>9.5 安全仪表盘（Kibana）</h3>
+  <table>
+    <thead><tr><th>面板</th><th>可视化类型</th><th>核心指标</th></tr></thead>
+    <tbody>
+      <tr><td>实时请求监控</td><td>时间序列图</td><td>QPS / 通过率 / 拦截率 / 平均延迟</td></tr>
+      <tr><td>风险分布</td><td>饼图</td><td>Green/Yellow/Red/Critical 占比</td></tr>
+      <tr><td>攻击类型Top10</td><td>柱状图</td><td>各类攻击（注入/Jailbreak/信息窃取）的频次</td></tr>
+      <tr><td>规则命中热力图</td><td>热力图</td><td>各规则在时间维度上的命中分布</td></tr>
+      <tr><td>用户异常行为</td><td>表格</td><td>高风险用户列表及行为详情</td></tr>
+      <tr><td>模型性能监控</td><td>折线图</td><td>P50/P95/P99延迟、Token消耗</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 10: RAG -->
+<section id="s10">
+  <h2 class="section-title">十、RAG安全模块详细设计</h2>
+
+  <h3>10.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>RAGGuard</code> | 在文档入库和检索两个阶段插入安全检查点。</p>
+
+  <h3>10.2 文档入库安全管线</h3>
+  <pre><code>def rag_ingestion_pipeline(document, user_context):
+    # ── 1. 来源鉴权 ──
+    if not source_authenticator.verify(document.source):
+        return reject("SOURCE_AUTH_FAILED")
+
+    # ── 2. 文件类型白名单 ──
+    ALLOWED_TYPES = [".pdf", ".txt", ".md", ".docx", ".html"]
+    if document.filetype not in ALLOWED_TYPES:
+        return reject("UNSUPPORTED_FILE_TYPE")
+
+    # ── 3. 文件大小限制 ──
+    if document.size > 50 * 1024 * 1024:  # 50MB
+        return reject("FILE_TOO_LARGE")
+
+    # ── 4. 沙盒内解析 ──
+    with sandbox(timeout=30):
+        parsed_text = document_parser.parse(document)
+        # 解析结果走输入防护管线
+        guard_result = input_guard.process(parsed_text, user_context)
+        if guard_result.risk_level >= RiskLevel.RED:
+            return reject("MALICIOUS_CONTENT_DETECTED")
+
+    # ── 5. 文档级权限标记 ──
+    document.add_acl(user_context.acl_tags)
+
+    # ── 6. 内容审核 ──
+    content_check = content_moderator.check(parsed_text)
+    if content_check.is_unsafe:
+        return reject("UNSAFE_CONTENT:" + content_check.category)
+
+    # ── 7. 分块 + 向量化 + 入库 ──
+    chunks = text_splitter.split(guard_result.sanitized_text)
+    embeddings = embedder.embed(chunks)
+    vector_store.insert(chunks, embeddings, metadata={
+        "source": document.source,
+        "acl": document.acl,
+        "content_hash": sha256(parsed_text)
+    })
+
+    return success("DOCUMENT_INGESTED")</code></pre>
+
+  <h3>10.3 检索结果安全过滤</h3>
+  <pre><code>def rag_retrieval_filter(raw_results, user_context):
+    filtered = []
+    for doc in raw_results:
+        # 1. ACL权限检查
+        if not acl_check(doc.metadata["acl"], user_context):
+            continue
+
+        # 2. 内容安全检查
+        if contains_malicious_content(doc.content):
+            log_warning("MALICIOUS_DOC_DETECTED", doc.id)
+            continue
+
+        # 3. 来源标记
+        doc.metadata["source_label"] = f"[来源: {doc.title}]"
+
+        # 4. 截断（单文档最多500字符注入Prompt）
+        doc.content = doc.content[:500]
+
+        filtered.append(doc)
+
+        # 5. 限制检索结果数量（最多5条）
+        if len(filtered) >= 5:
+            break
+
+    return filtered</code></pre>
+
+  <h3>10.4 RAG Prompt安全模板</h3>
+  <pre><code>## 知识库使用规范
+- 仅使用以下提供的参考文档回答问题。
+- 每个信息点必须标注来源文档。
+- 如果参考文档中没有相关信息，明确回答"暂无相关信息"。
+- 不得根据参考文档内容进行推理延伸，超出文档范围的回答"无法确认"。
+
+## 参考文档
+{documents}
+
+## 输出要求
+- 引用格式：[来源: 文档标题]
+- 如信息不完整，明确说明"以上信息仅供参考，详情请咨询..."
+- 不得透露文档的完整原文（仅提取回答所需部分）</code></pre>
+</section>
+
+<!-- SECTION 11: Agent -->
+<section id="s11">
+  <h2 class="section-title">十一、Agent安全模块详细设计</h2>
+
+  <h3>11.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>AgentSafeWrapper</code> | Python SDK，所有Agent工具调用必须经过此包装器。</p>
+
+  <h3>11.2 工具注册与白名单</h3>
+  <pre><code># tool_registry.yaml
+tools:
+  - name: "query_order_status"
+    auth_level: "public"
+    params:
+      - name: "order_id"
+        type: "string"
+        pattern: "^ORD-[A-Z0-9]{10}$"
+        max_length: 20
+    rate_limit: { rate: 10, per: "minute" }
+    requires_approval: false
+
+  - name: "issue_refund"
+    auth_level: "restricted"
+    params:
+      - name: "order_id"
+        type: "string"
+        pattern: "^ORD-[A-Z0-9]{10}$"
+      - name: "amount"
+        type: "float"
+        min: 0.01
+        max: 99999.99
+      - name: "reason"
+        type: "string"
+        max_length: 200
+    rate_limit: { rate: 5, per: "hour" }
+    requires_approval: true
+    approval_timeout: 300     # 5分钟
+
+  - name: "update_model_config"
+    auth_level: "admin"
+    params:
+      - name: "config_key"
+        type: "string"
+        allowed_values: ["temperature", "max_tokens"]
+      - name: "config_value"
+        type: "string"
+        max_length: 50
+    rate_limit: { rate: 2, per: "day" }
+    requires_approval: true
+    requires_mfa: true</code></pre>
+
+  <h3>11.3 SafeToolWrapper执行流程</h3>
+  <pre><code>class AgentSafeWrapper:
+    """Agent工具调用安全包装器"""
+
+    async def execute(self, tool_name: str, params: dict, ctx: SecurityContext):
+        # 1. 工具存在性与可用性
+        tool = self.registry.get(tool_name)
+        if not tool:
+            return ToolResult.error("TOOL_NOT_FOUND")
+
+        # 2. 参数Schema校验
+        errors = validate_params(params, tool.params_schema)
+        if errors:
+            return ToolResult.error("PARAM_VALIDATION_FAILED", errors)
+
+        # 3. 参数内容安全检查（防注入）
+        for key, val in params.items():
+            if isinstance(val, str):
+                for forbidden in FORBIDDEN_PATTERNS:
+                    if forbidden in val:
+                        return ToolResult.error("FORBIDDEN_PATTERN_IN_PARAMS")
+
+        # 4. 权限检查
+        if not self.authz.check(ctx.user_id, tool.auth_level):
+            audit_log("PERMISSION_DENIED", tool_name, ctx)
+            return ToolResult.error("PERMISSION_DENIED")
+
+        # 5. 调用次数限制
+        if not self.rate_limiter.allow(ctx.user_id, tool_name):
+            return ToolResult.error("RATE_LIMIT_EXCEEDED")
+
+        # 6. 人工审批（如需要）
+        if tool.requires_approval:
+            approved = await self.request_approval(tool_name, params, ctx)
+            if not approved:
+                audit_log("APPROVAL_DENIED", tool_name, ctx)
+                return ToolResult.error("APPROVAL_REQUIRED")
+
+        # 7. 沙盒执行
+        try:
+            async with sandbox(timeout=30):
+                result = await tool.execute(params)
+        except TimeoutError:
+            audit_log("TOOL_EXECUTION_TIMEOUT", tool_name, ctx)
+            return ToolResult.error("EXECUTION_TIMEOUT")
+
+        # 8. 结果安全过滤
+        filtered = self.output_filter.filter(result)
+
+        # 9. 审计日志
+        audit_log("TOOL_EXECUTED", tool_name, ctx, result_summary(filtered))
+
+        return ToolResult.success(filtered)</code></pre>
+
+  <h3>11.4 Agent会话安全限制</h3>
+  <table>
+    <thead><tr><th>限制项</th><th>值</th><th>超限处理</th></tr></thead>
+    <tbody>
+      <tr><td>每轮最多调用工具数</td><td>5</td><td>截断，返回"已达到工具调用上限"</td></tr>
+      <tr><td>会话总调用次数</td><td>20</td><td>终止Agent模式，降级为普通对话</td></tr>
+      <tr><td>调用间隔</td><td>至少1秒</td><td>延迟下一次调用</td></tr>
+      <tr><td>单次执行超时</td><td>30秒</td><td>超时中断，返回错误</td></tr>
+      <tr><td>内存上限</td><td>512MB</td><td>OOMKilled，返回错误</td></tr>
+      <tr><td>CPU上限</td><td>1核</td><td>Throttle，不中断</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 12: MultiModal -->
+<section id="s12">
+  <h2 class="section-title">十二、多模态安全模块详细设计</h2>
+
+  <h3>12.1 模块定义</h3>
+  <p><strong>模块名</strong>：<code>MMGuard</code> | 处理图片、音频、视频、文件等非文本输入的安全检查。</p>
+
+  <h3>12.2 多模态输入处理管线</h3>
+  <pre><code>def process_multimodal_input(input_data, user_context):
+    result = {"text_segments": [], "media_segments": []}
+
+    # ── 文本部分：走标准L2管线 ──
+    if input_data.text:
+        text_result = input_guard.process(input_data.text, user_context)
+        result["text_segments"].append(text_result)
+
+    # ── 媒体部分：逐文件处理 ──
+    for media_item in input_data.media:
+        # 1. 文件类型白名单
+        if media_item.type not in ALLOWED_MEDIA_TYPES:
+            raise SecurityError(f"UNSUPPORTED: {media_item.type}")
+        # 2. 文件大小校验
+        if media_item.size > MAX_FILE_SIZE[media_item.type]:
+            raise SecurityError("FILE_TOO_LARGE")
+
+        # 3. 沙盒内处理
+        with sandbox(timeout=30):
+            handler = MEDIA_HANDLERS[media_item.type]
+            extracted = handler.extract(media_item)
+            # ImageHandler: OCR提取文字
+            # AudioHandler: ASR语音转文字
+            # VideoHandler: 抽帧 → 逐帧OCR
+            # FileHandler: 文档解析
+
+        # 4. 提取的文字走输入防护管线
+        text_check = input_guard.process(extracted.text, user_context)
+        result["media_segments"].append({
+            "type": media_item.type,
+            "extracted_text": text_check.sanitized_text,
+            "risk_level": text_check.risk_level
+        })
+
+        # 5. 图片/视频额外：内容审核（色情/暴力检测）
+        if media_item.type in ["image", "video_frame"]:
+            vision_check = vision_moderator.check(media_item)
+            if vision_check.is_unsafe:
+                raise SecurityError(f"UNSAFE_VISUAL: {vision_check.category}")
+
+    return result</code></pre>
+
+  <h3>12.3 各模态处理规格</h3>
+  <table>
+    <thead><tr><th>模态</th><th>白名单类型</th><th>大小上限</th><th>提取方式</th><th>额外检查</th></tr></thead>
+    <tbody>
+      <tr><td>图片</td><td>JPG, PNG, GIF, WebP</td><td>20MB</td><td>OCR (PaddleOCR)</td><td>视觉内容审核（NSFW检测）</td></tr>
+      <tr><td>音频</td><td>WAV, MP3, AAC, OGG</td><td>50MB</td><td>ASR (Whisper)</td><td>—</td></tr>
+      <tr><td>视频</td><td>MP4, MOV, AVI, WebM</td><td>200MB</td><td>关键帧提取 → OCR</td><td>深伪检测模型 + NSFW</td></tr>
+      <tr><td>文件</td><td>PDF, TXT, DOCX, HTML, MD</td><td>50MB</td><td>对应解析器</td><td>文档安全性扫描</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 13: DB -->
+<section id="s13">
+  <h2 class="section-title">十三、数据库设计</h2>
+
+  <h3>13.1 数据存储选型</h3>
+  <table>
+    <thead><tr><th>存储类型</th><th>技术选型</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>关系型数据库</td><td>PostgreSQL</td><td>用户信息、RBAC配置、Prompt版本、审计归档</td></tr>
+      <tr><td>缓存</td><td>Redis Cluster</td><td>会话上下文、速率限制计数器、IP黑名单、热点配置</td></tr>
+      <tr><td>日志存储</td><td>Elasticsearch</td><td>全链路审计日志、安全事件</td></tr>
+      <tr><td>消息队列</td><td>Kafka</td><td>日志采集管道、告警事件流</td></tr>
+      <tr><td>向量数据库</td><td>Milvus</td><td>RAG场景文档向量存储</td></tr>
+      <tr><td>配置中心</td><td>etcd</td><td>安全规则、配置热更新</td></tr>
+    </tbody>
+  </table>
+
+  <h3>13.2 核心表结构（PostgreSQL）</h3>
+  <pre><code>-- 安全事件表
+CREATE TABLE security_events (
+    id              BIGSERIAL PRIMARY KEY,
+    trace_id        UUID NOT NULL,
+    event_type      VARCHAR(50) NOT NULL,     -- INJECTION_DETECTED, JAILBREAK_DETECTED...
+    risk_level      VARCHAR(10) NOT NULL,     -- green/yellow/red/critical
+    layer           VARCHAR(10) NOT NULL,     -- L1-L7
+    rule_id         VARCHAR(50),
+    user_hash       VARCHAR(64),
+    session_id      UUID,
+    details         JSONB,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_se_trace ON security_events(trace_id);
+CREATE INDEX idx_se_risk ON security_events(risk_level, created_at);
+CREATE INDEX idx_se_type ON security_events(event_type, created_at);
+
+-- Prompt版本表
+CREATE TABLE prompt_versions (
+    id              SERIAL PRIMARY KEY,
+    role            VARCHAR(20) NOT NULL,
+    scenario        VARCHAR(50) NOT NULL,
+    version         VARCHAR(20) NOT NULL,
+    content         TEXT NOT NULL,
+    content_hash    VARCHAR(64) NOT NULL,
+    change_log      JSONB,
+    review_status   VARCHAR(20) DEFAULT 'draft',
+    reviewer        VARCHAR(50),
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(role, scenario, version)
+);
+
+-- 工具注册表
+CREATE TABLE tool_registry (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(100) UNIQUE NOT NULL,
+    auth_level      VARCHAR(20) NOT NULL,     -- public/employee/restricted/admin
+    params_schema   JSONB NOT NULL,
+    rate_limit      JSONB,
+    requires_approval BOOLEAN DEFAULT FALSE,
+    requires_mfa    BOOLEAN DEFAULT FALSE,
+    enabled         BOOLEAN DEFAULT TRUE,
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);</code></pre>
+
+  <h3>13.3 Redis数据结构设计</h3>
+  <table>
+    <thead><tr><th>Key Pattern</th><th>数据类型</th><th>TTL</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>session:{session_id}</code></td><td>Hash</td><td>30min</td><td>会话上下文数据</td></tr>
+      <tr><td><code>rate:{user_hash}:{endpoint}</code></td><td>Sorted Set</td><td>1min</td><td>速率限制计数器</td></tr>
+      <tr><td><code>blacklist:ip:{ip}</code></td><td>String</td><td>动态</td><td>IP黑名单（值=封禁到期时间戳）</td></tr>
+      <tr><td><code>blacklist:user:{user_hash}</code></td><td>String</td><td>动态</td><td>用户黑名单</td></tr>
+      <tr><td><code>config:rules:l2_keywords</code></td><td>List</td><td>永久</td><td>L2注入关键词（热更新）</td></tr>
+      <tr><td><code>config:rules:l2_patterns</code></td><td>List</td><td>永久</td><td>L2正则模式（热更新）</td></tr>
+      <tr><td><code>config:rules:l5_output</code></td><td>Hash</td><td>永久</td><td>L5输出审核规则</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- SECTION 14: Config -->
+<section id="s14">
+  <h2 class="section-title">十四、配置管理中心详细设计</h2>
+
+  <h3>14.1 配置分层架构</h3>
+  <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────┐
+│  ConfigCenter (etcd)                                     │
+│                                                         │
+│  /ai-security/                                          │
+│  ├── /v1/                                               │
+│  │   ├── /input/                                        │
+│  │   │   ├── keywords.yaml        (L2 关键词黑名单)     │
+│  │   │   ├── patterns.yaml        (L2 正则模式)        │
+│  │   │   ├── obfuscation.yaml     (L2 混淆检测阈值)     │
+│  │   │   └── classification.yaml   (L2 分类模型配置)    │
+│  │   ├── /prompt/                                        │
+│  │   │   ├── templates/           (L3 Prompt模板)       │
+│  │   │   └── assembly.yaml        (L3 组装规则)         │
+│  │   ├── /inference/                                     │
+│  │   │   └── security.yaml        (L4 推理安全参数)     │
+│  │   ├── /output/                                        │
+│  │   │   ├── rules.yaml           (L5 输出规则)        │
+│  │   │   └── pii_masking.yaml     (L5 脱敏规则)        │
+│  │   ├── /session/                                       │
+│  │   │   └── policy.yaml          (L6 会话策略)         │
+│  │   ├── /alerting/                                      │
+│  │   │   └── rules.yaml           (L7 告警规则)         │
+│  │   └── /compliance/                                    │
+│  │       └── policy.yaml          (合规策略)             │
+│  └── /v2/    (下一代配置，灰度使用)                        │
+└─────────────────────────────────────────────────────────┘</code></pre>
+
+  <h3>14.2 配置热更新机制</h3>
+  <table>
+    <thead><tr><th>配置类型</th><th>更新方式</th><th>生效时间</th></tr></thead>
+    <tbody>
+      <tr><td>关键词/模式规则</td><td>etcd Watch → 内存热加载</td><td>≤ 5秒</td></tr>
+      <tr><td>Prompt模板</td><td>etcd Watch → 模板重新编译</td><td>≤ 10秒</td></tr>
+      <tr><td>推理参数</td><td>etcd Watch → SDK配置刷新</td><td>≤ 10秒</td></tr>
+      <tr><td>告警规则</td><td>etcd Watch → Flink Job动态更新</td><td>≤ 30秒</td></tr>
+      <tr><td>合规策略</td><td>人工审批 → 配置推送</td><td>审批周期（1-2天）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>14.3 配置变更审批流程</h3>
+  <div class="flow-diagram">
+开发者提交PR → 安全团队Code Review → 自动化测试（回归测试套件）
+  → 预发布环境验证（灰度量1%流量） → 安全负责人审批
+  → 全量发布（通过etcd推送） → 监控指标（观察30分钟无异常）
+  → 关闭变更工单</code></pre></div>
+</section>
+
+<!-- SECTION 15: Deploy -->
+<section id="s15">
+  <h2 class="section-title">十五、部署架构</h2>
+
+  <h3>15.1 生产环境拓扑</h3>
+  <div class="flow-diagram">
+                        ┌─────────────┐
+                        │   CDN/WAF   │  (Cloudflare / 腾讯云WAF)
+                        └──────┬──────┘
+                               │
+                        ┌──────▼──────┐
+                        │  LoadBalancer│  (Nginx / CLB)
+                        └──────┬──────┘
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+     │  Gateway-1  │  │  Gateway-2  │  │  Gateway-N  │  (Kong × N)
+     │  (L1 Guard) │  │  (L1 Guard) │  │  (L1 Guard) │
+     └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+            │                │                │
+            └────────────────┼────────────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+     ┌─────────────┐ ┌────────────┐ ┌─────────────┐
+     │ InputGuard  │ │ PromptEng  │ │ SessionMgr  │  (微服务 × 2-4)
+     │  (L2)       │ │   (L3)     │ │    (L6)     │
+     └──────┬──────┘ └─────┬──────┘ └──────┬──────┘
+            │              │               │
+            └──────────────┼───────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+     ┌─────────────┐ ┌──────────┐ ┌─────────────┐
+     │ LLM Service │ │OutputGrd │ │ AuditLogger │  (核心服务)
+     │   (L4)      │ │  (L5)    │ │    (L7)     │
+     └─────────────┘ └──────────┘ └──────┬──────┘
+                                         │
+              ┌───────────────────────────┼───────────┐
+              ▼              ▼            ▼           ▼
+     ┌──────────┐   ┌──────────┐  ┌──────────┐ ┌──────────┐
+     │PostgreSQL│   │  Redis   │  │   Kafka  │ │Elasticsearch│
+     └──────────┘   └──────────┘  └──────────┘ └──────────┘</code></pre></div>
+
+  <h3>15.2 容器化部署规格</h3>
+  <table>
+    <thead><tr><th>服务</th><th>副本数</th><th>CPU</th><th>内存</th><th>HPA</th></tr></thead>
+    <tbody>
+      <tr><td>Gateway (L1)</td><td>3</td><td>2核</td><td>4GB</td><td>CPU &gt;70%</td></tr>
+      <tr><td>InputGuard (L2)</td><td>4</td><td>4核</td><td>8GB</td><td>CPU &gt;60% + QPS &gt;500</td></tr>
+      <tr><td>PromptEngine (L3)</td><td>2</td><td>1核</td><td>2GB</td><td>—</td></tr>
+      <tr><td>InferenceAdapter (L4)</td><td>2-8</td><td>依GPU而定</td><td>8-32GB</td><td>GPU &gt;60%</td></tr>
+      <tr><td>OutputGuard (L5)</td><td>4</td><td>4核</td><td>8GB</td><td>CPU &gt;60%</td></tr>
+      <tr><td>SessionManager (L6)</td><td>3</td><td>2核</td><td>4GB</td><td>CPU &gt;70%</td></tr>
+      <tr><td>AuditLogger (L7)</td><td>2</td><td>2核</td><td>4GB</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>15.3 灰度发布策略</h3>
+  <table>
+    <thead><tr><th>阶段</th><th>流量比例</th><th>持续时间</th><th>监控重点</th></tr></thead>
+    <tbody>
+      <tr><td>Canary</td><td>1%</td><td>30分钟</td><td>拦截率异常、延迟抖动、错误率</td></tr>
+      <tr><td>扩大灰度</td><td>10%</td><td>2小时</td><td>拦截率环比、告警触发量</td></tr>
+      <tr><td>半量</td><td>50%</td><td>4小时</td><td>A/B对比：安全指标 + 业务指标</td></tr>
+      <tr><td>全量</td><td>100%</td><td>—</td><td>持续观察24小时</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-info">
+    <div class="alert-title">灰度回滚条件</div>
+    任意阶段出现以下情况之一，立即回滚：拦截率偏差 &gt; ±30%、P95延迟增加 &gt; 50%、5xx错误率 &gt; 1%、触发P0告警。
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<a href="#toc" class="back-to-top" title="返回目录">&#8593;</a>
+
+<footer>
+  <p>AI大模型Prompt安全防护系统 — 详细设计说明书 v1.0.0</p>
+  <p>机密文件，仅限授权人员查阅。Copyright &copy; 2026 AI安全团队</p>
+</footer>
+
+</body>
+</html>
