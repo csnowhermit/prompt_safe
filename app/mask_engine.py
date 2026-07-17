@@ -126,6 +126,13 @@ class MaskEngine:
         ))
 
         rules.append(MaskRule(
+            rule_id="R21",
+            name="座机号",
+            pattern=r"(?<!\d)0\d{2,3}-?\d{7,8}(?!\d)",
+            mask_func=lambda m: m.group()[:4] + "****" + m.group()[-4:]
+        ))
+
+        rules.append(MaskRule(
             rule_id="R11",
             name="QQ号",
             pattern=r"(?<!\d)[1-9]\d{4,10}(?!\d)",

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 
@@ -68,13 +69,4 @@ async def health():
 
 @app.get("/")
 async def root():
-    return {
-        "message": "AI大模型Prompt安全防护系统",
-        "version": "2.0.0",
-        "endpoints": [
-            "/api/v1/chat - 对话接口",
-            "/api/v1/mask/preview - 脱敏预览",
-            "/api/v1/check/preview - 安全检查预览",
-            "/health - 健康检查"
-        ]
-    }
+    return RedirectResponse(url="/docs")
