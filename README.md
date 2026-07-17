@@ -44,7 +44,6 @@ prompt_safe/
 │   │   └── roles.py
 │   ├── schemas/                # Pydantic模型
 │   │   ├── __init__.py
-│   │   ├── auth.py
 │   │   ├── chat.py
 │   │   ├── input_guard.py
 │   │   ├── output_guard.py
@@ -65,28 +64,29 @@ prompt_safe/
 │   │   └── mm_guard.py        # 多模态安全处理器
 │   └── api/                    # API路由
 │       ├── __init__.py
-│       ├── v1/
-│       │   ├── __init__.py
-│       │   ├── auth.py
-│       │   ├── chat.py
-│       │   ├── input_guard.py
-│       │   ├── output_guard.py
-│       │   ├── session.py
-│       │   ├── rag.py
-│       │   ├── agent.py
-│       │   └── mm.py
-│       └── dependencies.py     # 依赖注入
+│       ├── router.py           # 路由注册
+│       └── routes/
+│           ├── chat.py
+│           ├── input_guard.py
+│           ├── output_guard.py
+│           ├── session.py
+│           ├── audit.py
+│           ├── rag.py
+│           ├── agent.py
+│           └── mm_guard.py
 ├── tests/                      # 测试用例
 │   ├── __init__.py
+│   ├── test_api.py
 │   ├── test_input_guard.py
 │   ├── test_output_guard.py
 │   ├── test_prompt_engine.py
 │   ├── test_agent_wrapper.py
-│   ├── test_rag_guard.py
-│   └── conftest.py
+│   └── test_rag_guard.py
 ├── docs/                       # 设计文档
-├── requirements.txt            # 依赖清单
-├── .env                        # 环境变量
+├── requirements.txt            # 生产依赖清单
+├── requirements-dev.txt        # 开发依赖清单
+├── .env.template               # 环境变量模板
+├── .gitignore                  # Git忽略配置
 ├── Dockerfile                  # Docker配置
 ├── docker-compose.yml          # Docker Compose配置
 └── README.md                   # 项目说明
@@ -102,7 +102,11 @@ prompt_safe/
 ### 安装依赖
 
 ```bash
+# 生产环境
 pip install -r requirements.txt
+
+# 开发环境
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### 配置环境变量
@@ -110,18 +114,19 @@ pip install -r requirements.txt
 复制并编辑 `.env` 文件：
 
 ```bash
-cp .env.example .env
+cp .env.template .env
 ```
 
 主要配置项：
 
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
-| DATABASE_URL | 数据库连接URL | sqlite+aiosqlite:///./test.db |
-| REDIS_URL | Redis连接URL | redis://localhost:6379/0 |
-| JWT_SECRET_KEY | JWT密钥 | 自动生成 |
-| MAX_INPUT_CHARS | 最大输入字符数 | 8192 |
-| MAX_OUTPUT_CHARS | 最大输出字符数 | 16384 |
+| DATABASE_URL | 数据库连接URL | sqlite+aiosqlite:///./data/example_db.db |
+| REDIS_HOST | Redis主机地址 | localhost |
+| REDIS_PORT | Redis端口 | 6379 |
+| REDIS_DB | Redis数据库编号 | 0 |
+| MAX_INPUT_CHARS | 最大输入字符数 | 2000 |
+| MAX_OUTPUT_CHARS | 最大输出字符数 | 4096 |
 
 ### 启动服务
 
@@ -139,37 +144,27 @@ pytest tests/ -v
 
 ## API接口
 
-### 认证接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/v1/auth/login | 用户登录 |
-| POST | /api/v1/auth/logout | 用户登出 |
-| POST | /api/v1/auth/refresh | 刷新令牌 |
-| POST | /api/v1/auth/register | 用户注册 |
-
 ### 聊天接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /api/v1/chat | 安全聊天 |
-| GET | /api/v1/chat/{session_id} | 获取会话历史 |
 
 ### 安全防护接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | /api/v1/input-guard/process | 输入安全检查 |
-| POST | /api/v1/output-guard/check | 输出安全检查 |
+| POST | /api/v1/guard/input/check | 输入安全检查 |
+| POST | /api/v1/guard/output/check | 输出安全检查 |
 
 ### 会话管理接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | /api/v1/sessions | 创建会话 |
-| GET | /api/v1/sessions | 获取会话列表 |
-| GET | /api/v1/sessions/{session_id} | 获取会话详情 |
-| DELETE | /api/v1/sessions/{session_id} | 删除会话 |
+| POST | /api/v1/session | 创建会话 |
+| GET | /api/v1/session/{session_id} | 获取会话详情 |
+| DELETE | /api/v1/session/{session_id} | 删除会话 |
+| GET | /api/v1/session/user/{user_id} | 获取用户会话列表 |
 
 ### RAG安全接口
 
@@ -189,14 +184,27 @@ pytest tests/ -v
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | /api/v1/mm/analyze | 多模态内容安全分析 |
+| POST | /api/v1/mm/process | 多模态内容安全处理 |
+
+### 审计接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/v1/audit/logs | 获取审计日志 |
+| GET | /api/v1/audit/alerts | 获取安全告警 |
+
+### 健康检查
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | / | 根路径 |
+| GET | /health | 健康检查 |
 
 ## 安全架构
 
 ### L1 Gateway层
 - IP白名单/黑名单
 - 请求速率限制
-- 认证授权
 - 流量清洗
 
 ### L2 输入预处理层
