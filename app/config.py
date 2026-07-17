@@ -1,36 +1,29 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "AI_Prompt_Safe"
-    app_version: str = "1.0.0"
-    app_description: str = "AI大模型Prompt安全防护系统"
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    DEBUG: bool = False
+    
+    SAFETY_THRESHOLD: float = 0.5
+    ENABLE_MASK: bool = True
+    ENABLE_CHECK: bool = True
+    
+    SAFETY_MODEL: str = "ynygljj/Unified_Prompt_Guard"
+    MAX_PROMPT_TOKENS: int = 32768
+    
+    SAFETY_CHECK_TIMEOUT: int = 3
+    LLM_PROXY_TIMEOUT: int = 30
+    
+    FALLBACK_STRATEGY: str = "block"
+    
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
 
-    host: str = "0.0.0.0"
-    port: int = 8000
-    debug: bool = False
-
-    database_url: str = "sqlite+aiosqlite:///./data/example_db.db"
-
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-    redis_db: int = 0
-
-    secret_key: str = "your-secret-key-here-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-
-    max_input_chars: int = 2000
-    max_output_chars: int = 4096
-    obfuscation_threshold: float = 0.3
-    safety_threshold: float = 0.85
-
-    session_max_turns: int = 20
-    session_max_duration_minutes: int = 30
-    session_idle_timeout_minutes: int = 5
-    context_max_tokens: int = 4096
-
-    model_config = SettingsConfigDict(env_file=".env")
+    class Config:
+        env_file = ".env"
 
 
 settings = Settings()

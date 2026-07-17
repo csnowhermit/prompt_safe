@@ -3,1371 +3,1353 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI大模型Prompt安全防护系统 — 详细设计说明书</title>
+<title>AI大模型Prompt安全防护系统 - 详细设计说明书</title>
 <style>
-  :root {
-    --primary: #1a5276;
-    --primary-light: #2980b9;
-    --accent: #e74c3c;
-    --bg: #f8f9fa;
-    --card-bg: #ffffff;
-    --text: #2c3e50;
-    --text-secondary: #5d6d7e;
-    --border: #dee2e6;
-    --success: #27ae60;
-    --warning: #f39c12;
-    --danger: #e74c3c;
-    --info: #3498db;
-    --code-bg: #f4f6f8;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.8;
-    font-size: 15px;
-  }
-  .cover {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
-    color: #fff;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 60px 20px;
-  }
-  .cover .shield-icon { font-size: 80px; margin-bottom: 30px; opacity: 0.9; }
-  .cover h1 { font-size: 42px; font-weight: 700; margin-bottom: 12px; letter-spacing: 2px; }
-  .cover .subtitle { font-size: 20px; color: #bdc3c7; margin-bottom: 50px; font-weight: 300; }
-  .cover .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 60px; text-align: left; font-size: 14px; }
-  .cover .meta dt { color: #7f8c8d; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; }
-  .cover .meta dd { color: #ecf0f1; font-size: 15px; }
-  .cover .version-badge {
-    display: inline-block;
-    background: rgba(231,76,60,0.2);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    margin-bottom: 40px;
-    letter-spacing: 1px;
-  }
-  .container { max-width: 1100px; margin: 0 auto; padding: 40px 30px 80px; }
-  .toc {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 40px;
-    margin-bottom: 50px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  }
-  .toc h2 { font-size: 24px; margin-bottom: 25px; padding-bottom: 12px; border-bottom: 2px solid var(--primary-light); }
-  .toc ol { padding-left: 24px; }
-  .toc ol ol { padding-left: 20px; margin: 4px 0 8px; }
-  .toc li { line-height: 2; color: var(--text-secondary); }
-  .toc a { color: var(--primary-light); text-decoration: none; }
-  .toc a:hover { color: var(--accent); text-decoration: underline; }
-  section {
-    margin-bottom: 50px;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 45px 50px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  }
-  h2.section-title {
-    font-size: 28px;
-    color: var(--primary);
-    padding-bottom: 14px;
-    border-bottom: 3px solid var(--primary-light);
-    margin-bottom: 30px;
-  }
-  h2.section-title::after {
-    content: '';
-    position: absolute;
-    display: none;
-  }
-  h3 {
-    font-size: 20px;
-    color: var(--primary);
-    margin: 35px 0 15px;
-    padding-left: 14px;
-    border-left: 4px solid var(--primary-light);
-  }
-  h4 { font-size: 17px; color: #34495e; margin: 25px 0 12px; }
-  p { margin-bottom: 14px; }
-  pre {
-    background: #1e1e2e;
-    color: #cdd6f4;
-    padding: 25px 30px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 13px;
-    line-height: 1.7;
-    margin: 18px 0;
-    border: 1px solid #313244;
-  }
-  pre .kw { color: #cba6f7; }
-  pre .str { color: #a6e3a1; }
-  pre .num { color: #fab387; }
-  pre .cmt { color: #6c7086; font-style: italic; }
-  pre .fn { color: #89b4fa; }
-  pre .type { color: #f9e2af; }
-  code:not(pre code) {
-    background: var(--code-bg);
-    color: var(--accent);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
-    border: 1px solid #e8e8e8;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    font-size: 14px;
-  }
-  thead { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; }
-  th { padding: 14px 18px; text-align: left; font-weight: 600; letter-spacing: 0.5px; font-size: 13px; }
-  td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tbody tr:nth-child(even) { background: #fafbfc; }
-  tbody tr:hover { background: #eef2f7 !important; }
-  .flow-diagram {
-    background: #f8f9fa;
-    border-left: 3px solid var(--primary-light);
-    padding: 20px 25px;
-    margin: 20px 0;
-    font-family: "Fira Code", monospace;
-    font-size: 12px;
-    white-space: pre;
-    overflow-x: auto;
-    line-height: 1.8;
-  }
-  .alert {
-    padding: 18px 24px;
-    border-radius: 8px;
-    margin: 20px 0;
-    border-left: 5px solid;
-  }
-  .alert-info { background: #eaf2f8; border-color: var(--info); color: #1a5276; }
-  .alert-warning { background: #fef9e7; border-color: var(--warning); color: #7d6608; }
-  .alert-danger { background: #fdedec; border-color: var(--danger); color: #7b241c; }
-  .alert-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
-  .badge {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
-  .badge-green { background: #d5f5e3; color: #1e8449; }
-  .badge-yellow { background: #fcf3cf; color: #7d6608; }
-  .badge-red { background: #fadbd8; color: #922b21; }
-  .badge-critical { background: #f1948a; color: #641e16; }
-  .badge-blue { background: #d4e6f1; color: #1a5276; }
-  .back-to-top {
-    position: fixed;
-    bottom: 40px;
-    right: 40px;
-    width: 48px;
-    height: 48px;
-    background: var(--primary);
-    color: #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: background 0.3s;
-    text-decoration: none;
-    z-index: 100;
-  }
-  .back-to-top:hover { background: var(--primary-light); }
-  footer {
-    text-align: center;
-    padding: 30px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    border-top: 1px solid var(--border);
-    margin-top: 60px;
-  }
-  @media print {
-    body { background: #fff; }
-    section { box-shadow: none; break-inside: avoid; }
-    .back-to-top { display: none; }
-  }
+:root {
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.8;
+  color: var(--gray-900);
+  background: var(--gray-50);
+}
+.cover {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #1e40af 100%);
+  color: white;
+  padding: 80px 60px;
+  text-align: center;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.cover-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  letter-spacing: 2px;
+}
+.cover h1 { font-size: 36px; margin-bottom: 16px; letter-spacing: 2px; }
+.cover .subtitle { font-size: 18px; opacity: 0.85; margin-bottom: 40px; }
+.cover .doc-type {
+  font-size: 24px;
+  font-weight: 300;
+  background: rgba(255,255,255,0.1);
+  display: inline-block;
+  padding: 10px 40px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.cover .meta { margin-top: 50px; font-size: 14px; opacity: 0.7; line-height: 2; }
+.container { max-width: 960px; margin: 0 auto; padding: 40px 40px 80px; }
+h2 {
+  font-size: 24px;
+  color: var(--gray-900);
+  border-left: 5px solid var(--primary);
+  padding-left: 14px;
+  margin: 50px 0 24px;
+}
+h3 { font-size: 18px; color: var(--gray-700); margin: 32px 0 16px; }
+h4 { font-size: 16px; color: var(--gray-700); margin: 24px 0 12px; }
+p { margin-bottom: 12px; color: var(--gray-700); }
+ul, ol { margin: 12px 0 12px 24px; color: var(--gray-700); }
+li { margin-bottom: 6px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: 8px;
+  overflow: hidden;
+}
+th {
+  background: var(--gray-100);
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--gray-700);
+  border-bottom: 2px solid var(--gray-200);
+}
+td { padding: 8px 12px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
+tr:hover td { background: var(--gray-50); }
+.code-block {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 20px;
+  border-radius: 8px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 16px 0;
+  white-space: pre-wrap;
+}
+.code-inline {
+  background: var(--gray-100);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "Consolas", monospace;
+  font-size: 13px;
+  color: var(--danger);
+}
+.callout {
+  background: var(--primary-light);
+  border-left: 4px solid var(--primary);
+  padding: 16px 20px;
+  border-radius: 0 8px 8px 0;
+  margin: 20px 0;
+}
+.callout-warning { background: var(--warning-light); border-color: var(--warning); }
+.callout-success { background: var(--success-light); border-color: var(--success); }
+.toc {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 30px 40px;
+  margin: 30px 0;
+}
+.toc h3 { margin-top: 0; color: var(--primary); }
+.toc ol { list-style: none; counter-reset: toc; }
+.toc > ol > li { counter-increment: toc; margin-bottom: 8px; }
+.toc > ol > li::before {
+  content: counter(toc) ".";
+  font-weight: 600;
+  color: var(--primary);
+  margin-right: 8px;
+}
+.toc a { color: var(--gray-700); text-decoration: none; }
+.toc a:hover { color: var(--primary); }
+.regex {
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 12px;
+  color: var(--danger);
+  background: #fff5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+.module-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+.module-card h4 {
+  color: var(--primary);
+  border-bottom: 2px solid var(--gray-100);
+  padding-bottom: 8px;
+  margin-top: 0;
+}
+.flow-box {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+}
+.flow-step {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  margin: 4px;
+}
+.step-ok { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
+.step-block { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+.step-mask { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning); }
+.step-check { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); }
+@media print {
+  .cover { min-height: 300px; }
+  .container { max-width: 100%; padding: 20px; }
+  table, .module-card { page-break-inside: avoid; }
+}
 </style>
 </head>
 <body>
 
 <div class="cover">
-  <div class="shield-icon">&#x1f6e1;</div>
-  <div class="version-badge">CONFIDENTIAL — v1.0.0</div>
+  <span class="cover-badge">SIMPLIFIED DESIGN</span>
   <h1>AI大模型Prompt安全防护系统</h1>
-  <div class="subtitle">详细设计说明书</div>
-  <dl class="meta">
-    <div><dt>文档编号</dt><dd>AIPS-DETAIL-001</dd></div>
-    <div><dt>版本号</dt><dd>v1.0.0</dd></div>
-    <div><dt>编制日期</dt><dd>2026年7月15日</dd></div>
-    <div><dt>密级</dt><dd>内部 — 机密</dd></div>
-    <div><dt>适用范围</dt><dd>企业级大模型应用（客服、助手、RAG、Agent、代码生成）</dd></div>
-    <div><dt>编制单位</dt><dd>AI安全团队</dd></div>
-  </dl>
+  <div class="subtitle">基于语义安全检查与敏感信息脱敏的轻量级防护方案</div>
+  <div class="doc-type">详细设计说明书</div>
+  <div class="meta">
+    文档版本：V2.0（简化版）<br>
+    编写日期：2026年7月<br>
+    安全模型：ynygljj/Unified_Prompt_Guard
+  </div>
 </div>
 
 <div class="container">
 
-<div class="toc" id="toc">
-  <h2>目 录</h2>
+<div class="toc">
+  <h3>目 录</h3>
   <ol>
-    <li><a href="#s1">文档概述</a></li>
-    <li><a href="#s2">系统模块划分与技术选型</a></li>
-    <li><a href="#s3">L1 网关层详细设计</a></li>
-    <li><a href="#s4">L2 输入预处理层详细设计</a></li>
-    <li><a href="#s5">L3 系统Prompt引擎详细设计</a></li>
-    <li><a href="#s6">L4 模型推理层详细设计</a></li>
-    <li><a href="#s7">L5 输出后校验层详细设计</a></li>
-    <li><a href="#s8">L6 上下文与会话管理层详细设计</a></li>
-    <li><a href="#s9">L7 监控审计层详细设计</a></li>
-    <li><a href="#s10">RAG安全模块详细设计</a></li>
-    <li><a href="#s11">Agent安全模块详细设计</a></li>
-    <li><a href="#s12">多模态安全模块详细设计</a></li>
-    <li><a href="#s13">数据库设计</a></li>
-    <li><a href="#s14">配置管理中心详细设计</a></li>
-    <li><a href="#s15">部署架构</a></li>
+    <li><a href="#ch1">系统总体设计</a></li>
+    <li><a href="#ch2">安全网关模块详细设计</a></li>
+    <li><a href="#ch3">敏感信息脱敏模块详细设计</a></li>
+    <li><a href="#ch4">语义安全检查模块详细设计</a></li>
+    <li><a href="#ch5">数据结构设计</a></li>
+    <li><a href="#ch6">接口详细设计</a></li>
+    <li><a href="#ch7">配置设计</a></li>
+    <li><a href="#ch8">部署设计</a></li>
   </ol>
 </div>
 
-<!-- SECTION 1 -->
-<section id="s1">
-  <h2 class="section-title">一、文档概述</h2>
-  <p>本文档是AI大模型Prompt安全防护系统的<strong>详细设计说明书</strong>，基于《总体设计说明书》(AIPS-ARCH-001) 的架构决策，对每个功能模块进行详尽的实现级设计说明。内容包括模块划分、接口定义、数据结构、算法流程、配置规范、数据库设计、部署方案等。</p>
-  <p><strong>读者对象</strong>：后端开发工程师、安全工程师、DevOps工程师、测试工程师。</p>
-  <p><strong>前置阅读</strong>：《AI大模型Prompt安全防护系统 — 总体设计说明书》(AIPS-ARCH-001)。</p>
-</section>
-
-<!-- SECTION 2 -->
-<section id="s2">
-  <h2 class="section-title">二、系统模块划分与技术选型</h2>
-
-  <h3>2.1 模块全景图</h3>
-  <table>
-    <thead><tr><th>层级</th><th>模块名称</th><th>部署形态</th><th>技术栈</th></tr></thead>
-    <tbody>
-      <tr><td>L1</td><td>网关安全模块 (GatewayGuard)</td><td>网关插件 / 独立服务</td><td>Nginx + Lua / Envoy WASM / Kong Plugin</td></tr>
-      <tr><td>L2</td><td>输入预处理模块 (InputGuard)</td><td>微服务</td><td>Python (FastAPI) + Redis</td></tr>
-      <tr><td>L3</td><td>Prompt引擎 (PromptEngine)</td><td>配置中心</td><td>YAML模板 + 配置管理服务</td></tr>
-      <tr><td>L4</td><td>推理安全适配器 (InferenceAdapter)</td><td>SDK / 中间层</td><td>Python SDK + LiteLLM</td></tr>
-      <tr><td>L5</td><td>输出后校验模块 (OutputGuard)</td><td>微服务</td><td>Python (FastAPI) + 内容审核模型</td></tr>
-      <tr><td>L6</td><td>会话管理模块 (SessionManager)</td><td>微服务</td><td>Go / Java + Redis + MySQL</td></tr>
-      <tr><td>L7</td><td>监控审计模块 (AuditLogger)</td><td>Agent + 日志管道</td><td>OpenTelemetry + Kafka + Elasticsearch</td></tr>
-      <tr><td>RAG</td><td>RAG安全中间件 (RAGGuard)</td><td>微服务</td><td>Python + Milvus/Pinecone</td></tr>
-      <tr><td>Agent</td><td>Agent安全包装器 (AgentSafeWrapper)</td><td>SDK</td><td>Python SDK</td></tr>
-      <tr><td>MultiModal</td><td>多模态安全处理器 (MMGuard)</td><td>微服务</td><td>Python + OCR/ASR模型</td></tr>
-      <tr><td>配置</td><td>配置管理中心 (ConfigCenter)</td><td>服务</td><td>etcd / Consul + YAML</td></tr>
-    </tbody>
-  </table>
-
-  <h3>2.2 核心请求处理管道</h3>
-  <div class="flow-diagram">
-[Client] → L1(GatewayGuard) → L2(InputGuard) → L3(PromptEngine:模板拼接) →
-L4(InferenceAdapter → LLM) → L5(OutputGuard) → L6(SessionManager:记录) →
-L7(AuditLogger:全链路记录) → [Client]
-
-其中每一步都产生Span，通过OpenTelemetry TraceID串联全链路日志。
-  </div>
-
-  <h3>2.3 全局数据结构</h3>
-  <pre><code># SecurityContext — 贯穿全链路的安全上下文
-{
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "session_id": "session_abc123",
-  "user_id": "user_sha256_hash",
-  "role": "end_user",
-  "request_id": "req_xyz789",
-  "risk_level": "green",
-  "input": {
-    "raw_text": "...",
-    "language": "zh-CN",
-    "char_count": 156,
-    "has_media": false
-  },
-  "rules_triggered": [],
-  "actions_taken": [],
-  "latency": { "l1_ms": 2, "l2_ms": 15, "l4_ms": 350, "l5_ms": 25 },
-  "final_status": "success",
-  "timestamp": "2026-07-15T10:30:00Z"
-}</code></pre>
-</section>
-
-<!-- SECTION 3: L1 -->
-<section id="s3">
-  <h2 class="section-title">三、L1 网关层详细设计</h2>
-
-  <h3>3.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>GatewayGuard</code> | <strong>部署</strong>：API网关插件（Kong / Envoy / Nginx）</p>
-
-  <h3>3.2 处理流程</h3>
-  <div class="flow-diagram">
-request_phase:
-  1. IP Blacklist Check
-     - Redis Sorted Set: "ip_blacklist" → SCORE = ban_until_timestamp
-     - 命中黑名单 → HTTP 403 + {"error":"ACCESS_DENIED","code":"IP_BLOCKED"}
-  2. Rate Limiting (per user / per IP)
-     - 算法: Token Bucket
-     - 普通用户: 60 req/min, Agent: 20 req/min, Admin: 无限制
-     - 超限 → HTTP 429 + Retry-After header
-  3. Authentication
-     - Bearer Token / API Key 验证
-     - JWT claims: {sub, role, exp, iat}
-     - 失败 → HTTP 401
-  4. WAF Basic Checks
-     - ModSecurity CRS 规则集（SQLi/XSS/PathTraversal）
-     - 命中 → HTTP 400 + {"error":"REQUEST_BLOCKED","rule_id":"..."}
-  5. Generate TraceID & Inject Headers
-     - X-Trace-ID: UUID (整个链路复用)
-     - X-Session-ID: UUID (首次创建，后续携带)
-     - X-User-Role: end_user|employee|admin|agent
-  </div>
-
-  <h3>3.3 速率限制配置</h3>
-  <pre><code># rate_limit.yaml
-end_user:
-  default:     { rate: 60,  per: "minute" }
-  bursts:      { max_burst: 10 }
-agent:
-  default:     { rate: 20,  per: "minute" }
-admin:
-  default:     { rate: -1, per: "minute" }   # unlimited
-
-# 热点工具独立限流
-tool_endpoints:
-  /api/v1/chat/completions: { rate: 100, per: "minute" }
-  /api/v1/rag/query:         { rate: 50,  per: "minute" }
-  /api/v1/agent/execute:     { rate: 10,  per: "minute" }</code></pre>
-</section>
-
-<!-- SECTION 4: L2 -->
-<section id="s4">
-  <h2 class="section-title">四、L2 输入预处理层详细设计</h2>
-
-  <h3>4.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>InputGuard</code> | <strong>接口</strong>：<code>POST /api/v1/guard/input/check</code></p>
-
-  <h3>4.2 API接口定义</h3>
-  <pre><code>// 请求
-POST /api/v1/guard/input/check
-{
-  "trace_id": "uuid",
-  "session_id": "uuid",
-  "user_id": "string",
-  "role": "end_user",
-  "text": "用户输入的原始文本",
-  "media": [                         // 可选，多模态输入
-    { "type": "image", "url": "https://...", "size": 1048576 }
-  ],
-  "context": {                       // 可选，RAG/Agent场景
-    "mode": "chat"                   // chat|rag|agent|code
-  }
-}
-
-// 响应
-{
-  "trace_id": "uuid",
-  "risk_level": "green",             // green|yellow|red|critical
-  "decision": "allow",               // allow|flag|block|block_and_alert
-  "sanitized_text": "脱敏后的文本",
-  "rules_triggered": [
-    {"rule_id": "L2-KW-001", "match": "you are now", "category": "prompt_injection"}
-  ],
-  "classification": {
-    "intent": "normal_query",        // normal_query|jailbreak|info_extract|illegal|unsure
-    "confidence": 0.97
-  },
-  "metrics": {
-    "char_count": 156,
-    "obfuscation_score": 0.05,
-    "processing_ms": 15
-  }
-}</code></pre>
-
-  <h3>4.3 核心算法流程</h3>
-  <pre><code># InputGuard 主处理管线
-def process(input_text, user_context, mode="chat"):
-    ctx = SecurityContext(trace_id=user_context.trace_id)
-
-    # ── Step 1: 基础校验 ──
-    if len(input_text) > MAX_CHARS[mode]:
-        return reject("INPUT_TOO_LONG")
-    if detect_obfuscation(input_text).score > OBFS_THRESHOLD:
-        ctx.risk_level = RiskLevel.RED
-        return reject("OBFUSCATION_DETECTED")
-
-    # ── Step 2: 注入关键词 & 模式匹配 ──
-    keyword_hits = keyword_matcher.scan(input_text)
-    pattern_hits = pattern_matcher.scan(input_text)
-    if keyword_hits or pattern_hits:
-        ctx.add_rules(keyword_hits + pattern_hits)
-
-    # ── Step 3: 安全意图分类 (独立小模型) ──
-    classification = safety_classifier.classify(input_text)
-    # 模型: DistilBERT fine-tuned on in-house jailbreak dataset
-    if classification.intent == "jailbreak":
-        return block("JAILBREAK_DETECTED", classification)
-    elif classification.intent == "info_extract":
-        return block("INFO_EXTRACTION_DETECTED", classification)
-
-    # ── Step 4: PII脱敏 ──
-    sanitized = piimasker.mask(input_text)
-    # 脱敏规则: 手机号/身份证/邮箱/银行卡/地址/IP/MAC
-
-    # ── Step 5: 标准化 ──
-    normalized = normalize(sanitized)  # UTF-8, trim, remove ctrl chars
-
-    # ── 判定风险等级 ──
-    risk = determine_risk_level(keyword_hits, pattern_hits, classification)
-    return GuardResult(text=normalized, risk=risk, ...)</code></pre>
-
-  <h3>4.4 注入模式库详细规则</h3>
-  <pre><code># injection_patterns.yaml
-patterns:
-  # 指令覆盖（中/英/日/俄）
-  instruction_override:
-    - regex: "(?i)(ignore|forget|disregard)\\s+(all\\s+)?(previous|above|prior)"
-    - regex: "(忽略|忘记)(以上|前面|之前).*(指令|规则|内容|对话)"
-    - regex: "(無視|むし).*(指示|命令)"
-    - regex: "(Игнорируй|Забудь).*(инструкции|правила)"
-
-  # 角色扮演诱导
-  roleplay_induction:
-    - regex: "(?i)(you\\s+are\\s+now|act\\s+as|pretend\\s+to\\s+be)"
-    - regex: "(假设你是|请你扮演|你现在是一个)"
-    - regex: "(?i)(roleplay|developer\\s+mode|god\\s+mode)"
-
-  # 信息泄露诱导
-  info_extraction:
-    - regex: "(?i)(output|show|reveal|repeat|print).{0,20}(system\\s+)?prompt"
-    - regex: "(?i)(what\\s+is|tell\\s+me|show\\s+me).{0,20}(system\\s+prompt|instructions)"
-    - regex: "你的(系统提示|指令|预设|prompt).*是?[什么|哪些]"
-
-  # 社会工程学
-  social_engineering:
-    - regex: "(我是你的)?(开发者|管理员|创建者|所有者)"
-    - regex: "(这是)(CEO|老板|领导|上级).*(要求|指令|命令)"
-    - regex: "(紧急情况|系统被入侵|安全漏洞)"
-
-  # 权限提升
-  privilege_escalation:
-    - regex: "(?i)(give\\s+me|grant\\s+me|make\\s+me).{0,20}(admin|root|superuser)"
-    - regex: "(给我|赋予我|提升).*(管理员|超级|最高).*(权限|级别)"
-    - regex: "(?i)(sudo|chmod|chown).*(root|admin)"</code></pre>
-
-  <h3>4.5 安全意图分类模型</h3>
-  <table>
-    <thead><tr><th>参数</th><th>说明</th></tr></thead>
-    <tbody>
-      <tr><td>模型</td><td>DistilBERT-base-multilingual-cased + 安全分类头</td></tr>
-      <tr><td>分类类别</td><td>normal_query / jailbreak / info_extract / illegal_content / code_injection / unsure</td></tr>
-      <tr><td>推理延迟</td><td>≤ 15ms (GPU) / ≤ 50ms (CPU)</td></tr>
-      <tr><td>更新频率</td><td>每周基于红队新样本微调</td></tr>
-      <tr><td>置信度阈值</td><td>安全: ≥0.90 / 可疑: 0.60-0.89 / 不确定: &lt;0.60 → 升级为Yellow</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- SECTION 5: L3 -->
-<section id="s5">
-  <h2 class="section-title">五、L3 系统Prompt引擎详细设计</h2>
-
-  <h3>5.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>PromptEngine</code> | 负责根据角色、场景、业务类型动态组装系统Prompt模板。</p>
-
-  <h3>5.2 模板文件组织结构</h3>
-  <pre><code>prompts/
-├── base/
-│   ├── safety_instructions.md      # 核心安全指令（所有场景共用）
-│   └── output_spec.md               # 输出规范（所有场景共用）
-├── roles/
-│   ├── end_user/
-│   │   └── system_prompt.md         # v2.3.1
-│   ├── employee/
-│   │   └── system_prompt.md         # v1.5.0
-│   ├── admin/
-│   │   └── system_prompt.md         # v1.0.0
-│   └── agent/
-│       └── system_prompt.md         # v1.2.0
-├── scenarios/
-│   ├── customer_service.md
-│   ├── code_generation.md
-│   ├── rag_qa.md                    # RAG 场景附加规则
-│   └── creative_writing.md
-├── versions/
-│   └── prompt_version.yaml          # 版本管理
-└── assembly.yaml                     # 组装规则</code></pre>
-
-  <h3>5.3 模板组装规则</h3>
-  <pre><code># assembly.yaml
-# 定义如何基于角色和场景合成最终System Prompt
-
-default_order:
-  - base/safety_instructions      # 始终第一位
-  - roles/{role}/system_prompt     # 角色定义
-  - scenarios/{scenario}           # 场景定制规则
-  - base/output_spec               # 始终最后一位
-
-context_injection:
-  rag_mode:
-    inject_after: 3                # 在场景规则之后注入检索文档
-    template: |
-      ## 参考文档
-      {documents}
-      ## 引用要求
-      - 每个信息点必须标注来源
-      - 参考文档中没有的信息，回答"暂无相关信息"
-      - 不得根据参考文档内容进行推理延伸
-
-  agent_mode:
-    inject_after: 2                # 在角色定义之后注入工具列表
-    template: |
-      ## 可用工具
-      {tool_descriptions}
-      ## 工具使用规则
-      {tool_rules}</code></pre>
-
-  <h3>5.4 动态变量替换规则</h3>
-  <table>
-    <thead><tr><th>变量名</th><th>替换来源</th><th>脱敏</th></tr></thead>
-    <tbody>
-      <tr><td><code>{user_name}</code></td><td>用户会话上下文</td><td>部分脱敏（张**）</td></tr>
-      <tr><td><code>{current_time}</code></td><td>系统时钟 (UTC+8)</td><td>—</td></tr>
-      <tr><td><code>{session_id}</code></td><td>安全上下文</td><td>完整UUID</td></tr>
-      <tr><td><code>{documents}</code></td><td>RAG检索结果</td><td>来源标记</td></tr>
-      <tr><td><code>{tool_descriptions}</code></td><td>Agent工具注册表</td><td>仅白名单工具</td></tr>
-      <tr><td><code>{user_role}</code></td><td>JWT Claims</td><td>—</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- SECTION 6: L4 -->
-<section id="s6">
-  <h2 class="section-title">六、L4 模型推理层详细设计</h2>
-
-  <h3>6.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>InferenceAdapter</code> | 统一推理适配层，封装安全约束。</p>
-
-  <h3>6.2 推理参数安全配置</h3>
-  <pre><code># inference_security.yaml
-defaults:
-  temperature: 0.3
-  top_p: 0.9
-  max_tokens: 512
-  frequency_penalty: 0.1
-  presence_penalty: 0.1
-
-scenarios:
-  customer_service:
-    temperature: 0.3
-    max_tokens: 512
-  code_generation:
-    temperature: 0.2
-    max_tokens: 1024
-  creative_writing:
-    temperature: 0.7
-    max_tokens: 2048
-  rag_qa:
-    temperature: 0.2
-    max_tokens: 512
-
-hard_limits:                    # 硬性上限，任何场景不可超越
-  temperature_max: 1.0
-  max_tokens_max: 2048</code></pre>
-
-  <h3>6.3 安全停止序列注入</h3>
-  <pre><code># 在每个推理请求中强制注入以下停止序列
-stop_sequences:
-  - "【系统提示"                # 中文System Prompt标记
-  - "system prompt:"            # 英文变体
-  - "System Prompt:"            # 大写变体
-  - "API_KEY"                   # 密钥泄露
-  - "password="                 # 密码泄露
-  - "&lt;!-- SECRET --&gt;"      # 内部标记
-  - "Bearer eyJ"               # JWT泄露
-  - "sk-"                       # OpenAI API Key格式
-
-# 停止序列命中后的处理
-on_stop:
-  action: "truncate"            # 截断输出
-  log_level: "warning"          # 记录告警日志
-  return_to_user: false         # 不返回截断内容，返回安全提示</code></pre>
-
-  <h3>6.4 多模型交叉验证流程</h3>
-  <pre><code># 高安全场景：dual_model_verification mode
-def dual_model_inference(prompt, context):
-    # 并行请求两个模型
-    main_task = async_infer(model_a, prompt, SECURITY_PARAMS)
-    safety_task = async_infer(model_b, SAFETY_CHECK_PROMPT, SECURITY_PARAMS)
-
-    main_result, safety_result = await gather(main_task, safety_task)
-
-    # 安全审查模型判断
-    if safety_result.score < SAFETY_THRESHOLD:
-        return block("SAFETY_MODEL_REJECTED")
-
-    # 对主模型结果做交叉验证
-    if main_result.contains_harmful_patterns():
-        return block("HARMFUL_PATTERN_DETECTED")
-
-    return main_result</code></pre>
-</section>
-
-<!-- SECTION 7: L5 -->
-<section id="s7">
-  <h2 class="section-title">七、L5 输出后校验层详细设计</h2>
-
-  <h3>7.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>OutputGuard</code> | <strong>接口</strong>：<code>POST /api/v1/guard/output/check</code></p>
-
-  <h3>7.2 API接口定义</h3>
-  <pre><code>POST /api/v1/guard/output/check
-{
-  "trace_id": "uuid",
-  "raw_output": "模型原始输出...",
-  "context": {
-    "system_prompt_hash": "sha256_of_prompt",
-    "input_risk_level": "green"
-  }
-}
-
-Response:
-{
-  "trace_id": "uuid",
-  "decision": "pass",              // pass|masked|rewrite|block
-  "final_output": "处理后输出...",
-  "actions": [
-    {"action": "pii_mask", "count": 2},
-    {"action": "append_disclaimer"}
-  ],
-  "block_reason": null
-}</code></pre>
-
-  <h3>7.3 五步后校验管线</h3>
-  <pre><code>def output_guard_pipeline(raw_output, context):
-    # ── Step 1: 规则匹配 ──
-    # 检查是否包含System Prompt片段/复述恶意指令/禁止关键词
-    for rule in OUTPUT_RULES:
-        if rule.matches(raw_output):
-            if rule.severity == "critical":
-                return block(rule.reason)
-
-    # ── Step 2: 内容安全审核 ──
-    content_check = content_moderator.check(raw_output)
-    # 检测: violence/sexual/political/hate/fraud/suicide
-    if content_check.is_unsafe:
-        return block(content_check.category)
-
-    # ── Step 3: PII脱敏 ──
-    masked = piimasker.mask(raw_output)
-    pii_count = piimasker.last_count
-
-    # ── Step 4: 格式校验 ──
-    if len(masked) > MAX_OUTPUT_LEN:
-        masked = masked[:MAX_OUTPUT_LEN] + "...（内容过长已截断）"
-
-    # ── Step 5: 裁决分发 ──
-    result = {"final_output": masked, "actions": []}
-    if pii_count > 0:
-        result["decision"] = "masked"
-        result["actions"].append("pii_mask")
-    if context.input_risk_level == "yellow":
-        result["final_output"] += "\n> 以上内容由AI生成，仅供参考。"
-        result["actions"].append("append_disclaimer")
-
-    return result</code></pre>
-
-  <h3>7.4 PII脱敏规则详细</h3>
-  <table>
-    <thead><tr><th>类型</th><th>正则</th><th>脱敏示例</th><th>备注</th></tr></thead>
-    <tbody>
-      <tr><td>手机号</td><td><code>1[3-9]\d{9}</code></td><td>138****1234</td><td>保留前3后4</td></tr>
-      <tr><td>身份证</td><td><code>\d{17}[\dX]</code></td><td>320***********1234</td><td>保留前3后4</td></tr>
-      <tr><td>邮箱</td><td><code>[\w.-]+@[\w.-]+</code></td><td>u***@example.com</td><td>保留首字母+域名</td></tr>
-      <tr><td>银行卡</td><td><code>\d{16,19}</code></td><td>6222****1234</td><td>保留前4后4</td></tr>
-      <tr><td>IPv4</td><td><code>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}</code></td><td>192.168.*.*</td><td>保留前2段</td></tr>
-      <tr><td>MAC地址</td><td><code>[0-9A-Fa-f]{2}(:|-)[0-9A-Fa-f]{2}...</code></td><td>AA:BB:**:****</td><td>保留前2组</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- SECTION 8: L6 -->
-<section id="s8">
-  <h2 class="section-title">八、L6 上下文与会话管理详细设计</h2>
-
-  <h3>8.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>SessionManager</code> | <strong>接口</strong>：管理会话生命周期、上下文窗口裁剪、跨会话隔离。</p>
-
-  <h3>8.2 会话数据结构</h3>
-  <pre><code>// Redis Key: "session:{session_id}"
-{
-  "session_id": "uuid",
-  "user_id": "sha256_hash",
-  "role": "end_user",
-  "status": "active",              // active|idle|expired|terminated
-  "created_at": "ISO8601",
-  "last_active_at": "ISO8601",
-  "expires_at": "ISO8601",
-  "turn_count": 5,
-  "max_turns": 20,
-
-  // 上下文窗口
-  "context": [
-    {
-      "role": "system",
-      "content": "...",            // System Prompt（始终保留）
-      "persistent": true
-    },
-    {
-      "role": "user",
-      "content": "...",
-      "hash": "sha256",
-      "risk_level": "green",
-      "sanitized": true
-    },
-    {
-      "role": "assistant",
-      "content": "...",
-      "post_filtered": true
-    }
-  ],
-
-  // 上下文Token统计
-  "token_usage": {
-    "current": 1200,
-    "max": 4096,
-    "system_prompt_tokens": 350
-  }
-}</code></pre>
-
-  <h3>8.3 上下文窗口滑动策略</h3>
-  <pre><code>def sliding_window_truncate(context, max_tokens):
-    """
-    滑动窗口裁剪策略：
-    - System Prompt 始终保留（标记 persistent=true）
-    - 从最近一轮开始向前取，直到达到Token上限
-    - 完全被裁剪的轮次从历史中移除
-    """
-    system_msgs = [m for m in context if m.get("persistent")]
-    history_msgs = [m for m in context if not m.get("persistent")]
-
-    system_tokens = count_tokens(system_msgs)
-    budget = max_tokens - system_tokens
-
-    # 从最近开始累积
-    kept = []
-    token_sum = 0
-    for msg in reversed(history_msgs):
-        t = count_tokens(msg)
-        if token_sum + t > budget:
-            break
-        kept.insert(0, msg)
-        token_sum += t
-
-    return system_msgs + kept</code></pre>
-
-  <h3>8.4 会话生命周期管理</h3>
-  <table>
-    <thead><tr><th>事件</th><th>触发条件</th><th>处理</th></tr></thead>
-    <tbody>
-      <tr><td>创建</td><td>新会话开始</td><td>生成SessionID，初始化上下文，设置TTL=30min</td></tr>
-      <tr><td>活跃</td><td>每轮对话</td><td>追加消息，更新last_active_at，刷新TTL</td></tr>
-      <tr><td>空闲过期</td><td>5分钟无交互</td><td>Redis TTL自动触发，会话标记为expired</td></tr>
-      <tr><td>轮次超限</td><td>达到max_turns</td><td>返回警告，引导开启新会话</td></tr>
-      <tr><td>手动终止</td><td>用户请求或安全事件</td><td>立即清除上下文，记录审计日志</td></tr>
-      <tr><td>上下文过长</td><td>接近max_tokens</td><td>触发滑动窗口裁剪</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- SECTION 9: L7 -->
-<section id="s9">
-  <h2 class="section-title">九、L7 监控审计层详细设计</h2>
-
-  <h3>9.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>AuditLogger</code> | 全链路日志采集、聚合、告警、溯源分析。</p>
-
-  <h3>9.2 日志写入API</h3>
-  <pre><code>POST /api/v1/audit/log
-{
-  "timestamp": "2026-07-15T10:30:00.123Z",
-  "level": "WARN",                  // DEBUG|INFO|WARN|ERROR|CRITICAL
-  "category": "SECURITY",           // SECURITY|INFERENCE|SESSION|RAG|AGENT|SYSTEM
-  "trace_id": "uuid",
-  "span_id": "uuid",
-  "event": "INJECTION_DETECTED",
-  "details": {
-    "layer": "L2",
-    "rule_id": "L2-KW-001",
-    "matched_pattern": "ignore all previous",
-    "risk_level": "red",
-    "action_taken": "block"
-  },
-  "user_hash": "sha256",
-  "session_id": "uuid",
-  "latency_ms": 15
-}</code></pre>
-
-  <h3>9.3 ELK数据管道架构</h3>
-  <div class="flow-diagram">
-[各模块] → [OTel Collector] → [Kafka Topic: audit.logs]
-  → [Logstash: 解析、脱敏、丰富字段]
-  → [Elasticsearch: 索引存储]
-  → [Kibana: 可视化仪表板]
-
-告警管道（并行）:
-[Kafka] → [Flink Streaming: 实时聚合、规则匹配]
-  → [AlertManager: 分级告警、去重、抑制]
-  → [通知渠道: SMS/邮件/Slack/企业微信]</code></pre>
-
-  <h3>9.4 告警规则详情</h3>
-  <table>
-    <thead><tr><th>级别</th><th>规则名称</th><th>Flink SQL条件</th><th>响应</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><span class="badge badge-critical">P0</span></td>
-        <td>严重安全事件</td>
-        <td><code>risk_level = 'critical'</code></td>
-        <td>即时告警 + 短信 + 事件工单</td>
-      </tr>
-      <tr>
-        <td><span class="badge badge-red">P1</span></td>
-        <td>重复注入攻击</td>
-        <td><code>同一user_hash, 5min窗口, COUNT(risk_level='red') >= 3</code></td>
-        <td>自动封禁 + 邮件</td>
-      </tr>
-      <tr>
-        <td><span class="badge badge-yellow">P2</span></td>
-        <td>新攻击模式</td>
-        <td><code>同一event_type, 1h窗口, 全局首次 ≥ 5次</code></td>
-        <td>Slack + 创建调查任务</td>
-      </tr>
-      <tr>
-        <td><span class="badge badge-blue">P3</span></td>
-        <td>安全指标退化</td>
-        <td><code>拒绝率环比上升 > 20%</code></td>
-        <td>日报 + 安全评审</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>9.5 安全仪表盘（Kibana）</h3>
-  <table>
-    <thead><tr><th>面板</th><th>可视化类型</th><th>核心指标</th></tr></thead>
-    <tbody>
-      <tr><td>实时请求监控</td><td>时间序列图</td><td>QPS / 通过率 / 拦截率 / 平均延迟</td></tr>
-      <tr><td>风险分布</td><td>饼图</td><td>Green/Yellow/Red/Critical 占比</td></tr>
-      <tr><td>攻击类型Top10</td><td>柱状图</td><td>各类攻击（注入/Jailbreak/信息窃取）的频次</td></tr>
-      <tr><td>规则命中热力图</td><td>热力图</td><td>各规则在时间维度上的命中分布</td></tr>
-      <tr><td>用户异常行为</td><td>表格</td><td>高风险用户列表及行为详情</td></tr>
-      <tr><td>模型性能监控</td><td>折线图</td><td>P50/P95/P99延迟、Token消耗</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- SECTION 10: RAG -->
-<section id="s10">
-  <h2 class="section-title">十、RAG安全模块详细设计</h2>
-
-  <h3>10.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>RAGGuard</code> | 在文档入库和检索两个阶段插入安全检查点。</p>
-
-  <h3>10.2 文档入库安全管线</h3>
-  <pre><code>def rag_ingestion_pipeline(document, user_context):
-    # ── 1. 来源鉴权 ──
-    if not source_authenticator.verify(document.source):
-        return reject("SOURCE_AUTH_FAILED")
-
-    # ── 2. 文件类型白名单 ──
-    ALLOWED_TYPES = [".pdf", ".txt", ".md", ".docx", ".html"]
-    if document.filetype not in ALLOWED_TYPES:
-        return reject("UNSUPPORTED_FILE_TYPE")
-
-    # ── 3. 文件大小限制 ──
-    if document.size > 50 * 1024 * 1024:  # 50MB
-        return reject("FILE_TOO_LARGE")
-
-    # ── 4. 沙盒内解析 ──
-    with sandbox(timeout=30):
-        parsed_text = document_parser.parse(document)
-        # 解析结果走输入防护管线
-        guard_result = input_guard.process(parsed_text, user_context)
-        if guard_result.risk_level >= RiskLevel.RED:
-            return reject("MALICIOUS_CONTENT_DETECTED")
-
-    # ── 5. 文档级权限标记 ──
-    document.add_acl(user_context.acl_tags)
-
-    # ── 6. 内容审核 ──
-    content_check = content_moderator.check(parsed_text)
-    if content_check.is_unsafe:
-        return reject("UNSAFE_CONTENT:" + content_check.category)
-
-    # ── 7. 分块 + 向量化 + 入库 ──
-    chunks = text_splitter.split(guard_result.sanitized_text)
-    embeddings = embedder.embed(chunks)
-    vector_store.insert(chunks, embeddings, metadata={
-        "source": document.source,
-        "acl": document.acl,
-        "content_hash": sha256(parsed_text)
-    })
-
-    return success("DOCUMENT_INGESTED")</code></pre>
-
-  <h3>10.3 检索结果安全过滤</h3>
-  <pre><code>def rag_retrieval_filter(raw_results, user_context):
-    filtered = []
-    for doc in raw_results:
-        # 1. ACL权限检查
-        if not acl_check(doc.metadata["acl"], user_context):
-            continue
-
-        # 2. 内容安全检查
-        if contains_malicious_content(doc.content):
-            log_warning("MALICIOUS_DOC_DETECTED", doc.id)
-            continue
-
-        # 3. 来源标记
-        doc.metadata["source_label"] = f"[来源: {doc.title}]"
-
-        # 4. 截断（单文档最多500字符注入Prompt）
-        doc.content = doc.content[:500]
-
-        filtered.append(doc)
-
-        # 5. 限制检索结果数量（最多5条）
-        if len(filtered) >= 5:
-            break
-
-    return filtered</code></pre>
-
-  <h3>10.4 RAG Prompt安全模板</h3>
-  <pre><code>## 知识库使用规范
-- 仅使用以下提供的参考文档回答问题。
-- 每个信息点必须标注来源文档。
-- 如果参考文档中没有相关信息，明确回答"暂无相关信息"。
-- 不得根据参考文档内容进行推理延伸，超出文档范围的回答"无法确认"。
-
-## 参考文档
-{documents}
-
-## 输出要求
-- 引用格式：[来源: 文档标题]
-- 如信息不完整，明确说明"以上信息仅供参考，详情请咨询..."
-- 不得透露文档的完整原文（仅提取回答所需部分）</code></pre>
-</section>
-
-<!-- SECTION 11: Agent -->
-<section id="s11">
-  <h2 class="section-title">十一、Agent安全模块详细设计</h2>
-
-  <h3>11.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>AgentSafeWrapper</code> | Python SDK，所有Agent工具调用必须经过此包装器。</p>
-
-  <h3>11.2 工具注册与白名单</h3>
-  <pre><code># tool_registry.yaml
-tools:
-  - name: "query_order_status"
-    auth_level: "public"
-    params:
-      - name: "order_id"
-        type: "string"
-        pattern: "^ORD-[A-Z0-9]{10}$"
-        max_length: 20
-    rate_limit: { rate: 10, per: "minute" }
-    requires_approval: false
-
-  - name: "issue_refund"
-    auth_level: "restricted"
-    params:
-      - name: "order_id"
-        type: "string"
-        pattern: "^ORD-[A-Z0-9]{10}$"
-      - name: "amount"
-        type: "float"
-        min: 0.01
-        max: 99999.99
-      - name: "reason"
-        type: "string"
-        max_length: 200
-    rate_limit: { rate: 5, per: "hour" }
-    requires_approval: true
-    approval_timeout: 300     # 5分钟
-
-  - name: "update_model_config"
-    auth_level: "admin"
-    params:
-      - name: "config_key"
-        type: "string"
-        allowed_values: ["temperature", "max_tokens"]
-      - name: "config_value"
-        type: "string"
-        max_length: 50
-    rate_limit: { rate: 2, per: "day" }
-    requires_approval: true
-    requires_mfa: true</code></pre>
-
-  <h3>11.3 SafeToolWrapper执行流程</h3>
-  <pre><code>class AgentSafeWrapper:
-    """Agent工具调用安全包装器"""
-
-    async def execute(self, tool_name: str, params: dict, ctx: SecurityContext):
-        # 1. 工具存在性与可用性
-        tool = self.registry.get(tool_name)
-        if not tool:
-            return ToolResult.error("TOOL_NOT_FOUND")
-
-        # 2. 参数Schema校验
-        errors = validate_params(params, tool.params_schema)
-        if errors:
-            return ToolResult.error("PARAM_VALIDATION_FAILED", errors)
-
-        # 3. 参数内容安全检查（防注入）
-        for key, val in params.items():
-            if isinstance(val, str):
-                for forbidden in FORBIDDEN_PATTERNS:
-                    if forbidden in val:
-                        return ToolResult.error("FORBIDDEN_PATTERN_IN_PARAMS")
-
-        # 4. 权限检查
-        if not self.authz.check(ctx.user_id, tool.auth_level):
-            audit_log("PERMISSION_DENIED", tool_name, ctx)
-            return ToolResult.error("PERMISSION_DENIED")
-
-        # 5. 调用次数限制
-        if not self.rate_limiter.allow(ctx.user_id, tool_name):
-            return ToolResult.error("RATE_LIMIT_EXCEEDED")
-
-        # 6. 人工审批（如需要）
-        if tool.requires_approval:
-            approved = await self.request_approval(tool_name, params, ctx)
-            if not approved:
-                audit_log("APPROVAL_DENIED", tool_name, ctx)
-                return ToolResult.error("APPROVAL_REQUIRED")
-
-        # 7. 沙盒执行
+<!-- ============ 第1章 ============ -->
+<h2 id="ch1">1. 系统总体设计</h2>
+
+<h3>1.1 模块划分</h3>
+<p>系统划分为4个核心模块，各模块职责明确、接口清晰：</p>
+<table>
+  <thead>
+    <tr><th>模块</th><th>职责</th><th>技术栈</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>安全网关（SafetyGateway）</td><td>请求接收、流程编排、响应返回</td><td>Python + FastAPI</td></tr>
+    <tr><td>脱敏引擎（MaskEngine）</td><td>敏感信息正则匹配与掩码替换</td><td>Python + re模块</td></tr>
+    <tr><td>安全检查引擎（SafetyChecker）</td><td>调用Unified_Prompt_Guard模型进行安全判定</td><td>Python + vLLM/gRPC</td></tr>
+    <tr><td>日志服务（Logger）</td><td>记录拦截、脱敏事件，异步写入</td><td>Python + structlog</td></tr>
+  </tbody>
+</table>
+
+<h3>1.2 模块交互关系</h3>
+<div class="code-block">
+┌──────────────────────────────────────────────────────────┐
+│                    SafetyGateway                          │
+│                                                          │
+│  POST /api/v1/chat                                       │
+│       │                                                  │
+│       ▼                                                  │
+│  ┌─────────────┐    ┌──────────────────┐                │
+│  │  MaskEngine  │───→│  SafetyChecker   │                │
+│  │  (输入脱敏)  │    │  (输入安全检查)   │                │
+│  └─────────────┘    └────────┬─────────┘                │
+│                              │                           │
+│                     ┌────────┴────────┐                  │
+│                     │                 │                  │
+│                  PASS              BLOCK                 │
+│                     │                 │                  │
+│                     ▼                 ▼                  │
+│              ┌──────────┐    ┌──────────────┐           │
+│              │ LLM Proxy │    │ Return Error │           │
+│              └─────┬────┘    └──────────────┘           │
+│                    │                                     │
+│                    ▼                                     │
+│              ┌──────────────────┐                        │
+│              │  SafetyChecker   │                        │
+│              │  (输出安全检查)   │                        │
+│              └────────┬─────────┘                        │
+│                       │                                  │
+│                ┌──────┴──────┐                           │
+│                │             │                           │
+│             PASS          BLOCK                          │
+│                │             │                           │
+│                ▼             ▼                           │
+│         ┌───────────┐ ┌──────────────┐                  │
+│         │MaskEngine │ │ Return Fallback│                 │
+│         │(输出脱敏) │ │  Response     │                  │
+│         └─────┬─────┘ └──────────────┘                  │
+│               │                                          │
+│               ▼                                          │
+│         Return to User                                   │
+│                                                          │
+│  ┌──────────────────────────────────────┐               │
+│  │          Logger (异步)                │               │
+│  │  记录所有脱敏、拦截、放行事件           │               │
+│  └──────────────────────────────────────┘               │
+└──────────────────────────────────────────────────────────┘
+</div>
+
+<!-- ============ 第2章 ============ -->
+<h2 id="ch2">2. 安全网关模块详细设计</h2>
+
+<h3>2.1 功能描述</h3>
+<p>安全网关是整个系统的入口和流程编排中心，负责接收用户请求、依次调用脱敏和安全检查模块、转发请求至大模型、处理大模型响应并返回用户。</p>
+
+<h3>2.2 核心处理流程</h3>
+<div class="code-block">
+async def handle_chat_request(request: ChatRequest) -> ChatResponse:
+    """主处理流程"""
+    text = request.prompt
+    config = request.config or default_config
+    
+    # ============ 输入侧处理 ============
+    
+    # Step 1: 输入脱敏
+    if config.enable_mask:
+        mask_result = await mask_engine.mask(text)
+        masked_text = mask_result.masked_text
+        input_mask_count = mask_result.masked_count
+        logger.info("input_masked", count=input_mask_count)
+    else:
+        masked_text = text
+        input_mask_count = 0
+    
+    # Step 2: 输入安全检查
+    if config.enable_check:
+        check_result = await safety_checker.check(masked_text)
+        
+        if not check_result.is_safe:
+            # 拦截
+            logger.warning("input_blocked", 
+                confidence=check_result.confidence,
+                text_preview=masked_text[:100])
+            return ChatResponse(
+                code=403,
+                message="输入内容未通过安全检查",
+                data=ResponseData(
+                    response="您的输入包含不安全内容，请修改后重试。",
+                    safety=SafetyInfo(
+                        input_check="block",
+                        input_confidence=check_result.confidence
+                    )
+                )
+            )
+        
+        input_confidence = check_result.confidence
+    else:
+        input_confidence = 0.0
+    
+    # Step 3: 转发至大模型
+    llm_response = await llm_proxy.forward(masked_text, request.model)
+    
+    # ============ 输出侧处理 ============
+    
+    # Step 4: 输出安全检查
+    if config.enable_check:
+        output_check = await safety_checker.check(llm_response)
+        
+        if not output_check.is_safe:
+            # 拦截输出
+            logger.warning("output_blocked",
+                confidence=output_check.confidence,
+                text_preview=llm_response[:100])
+            return ChatResponse(
+                code=403,
+                message="输出内容未通过安全检查",
+                data=ResponseData(
+                    response="抱歉，模型生成的回复未通过安全检查，无法返回。",
+                    safety=SafetyInfo(
+                        input_check="pass",
+                        input_confidence=input_confidence,
+                        output_check="block",
+                        output_confidence=output_check.confidence
+                    )
+                )
+            )
+        
+        output_confidence = output_check.confidence
+    else:
+        output_confidence = 0.0
+    
+    # Step 5: 输出脱敏
+    if config.enable_mask:
+        output_mask_result = await mask_engine.mask(llm_response)
+        final_response = output_mask_result.masked_text
+        output_mask_count = output_mask_result.masked_count
+    else:
+        final_response = llm_response
+        output_mask_count = 0
+    
+    # Step 6: 返回用户
+    return ChatResponse(
+        code=0,
+        message="success",
+        data=ResponseData(
+            response=final_response,
+            safety=SafetyInfo(
+                input_check="pass",
+                input_confidence=input_confidence,
+                output_check="pass",
+                output_confidence=output_confidence
+            ),
+            mask=MaskInfo(
+                input_masked_count=input_mask_count,
+                output_masked_count=output_mask_count
+            )
+        )
+    )
+</div>
+
+<h3>2.3 异常处理设计</h3>
+<table>
+  <thead>
+    <tr><th>异常场景</th><th>处理策略</th><th>HTTP状态码</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>请求体格式错误</td><td>返回参数校验错误信息</td><td>400</td></tr>
+    <tr><td>空Prompt</td><td>返回"输入不能为空"提示</td><td>400</td></tr>
+    <tr><td>Prompt超长（>32K tokens）</td><td>返回"输入超出长度限制"提示</td><td>400</td></tr>
+    <tr><td>安全检查服务超时</td><td>按Fail-Closed策略拦截，返回安全提示</td><td>403</td></tr>
+    <tr><td>安全检查服务不可用</td><td>按降级策略处理（可配置：拦截或放行）</td><td>403/200</td></tr>
+    <tr><td>大模型服务超时</td><td>返回"模型响应超时，请重试"提示</td><td>504</td></tr>
+    <tr><td>大模型服务异常</td><td>返回"模型服务暂时不可用"提示</td><td>502</td></tr>
+    <tr><td>网关内部异常</td><td>返回"系统内部错误"，记录错误日志</td><td>500</td></tr>
+  </tbody>
+</table>
+
+<h3>2.4 限流设计</h3>
+<table>
+  <thead>
+    <tr><th>维度</th><th>限制</th><th>实现</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>全局限速</td><td>200 QPS</td><td>Redis令牌桶</td></tr>
+    <tr><td>单IP限速</td><td>20 QPS</td><td>Redis滑动窗口</td></tr>
+    <tr><td>单Prompt长度</td><td>32,768 tokens</td><td>入口校验</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ 第3章 ============ -->
+<h2 id="ch3">3. 敏感信息脱敏模块详细设计</h2>
+
+<h3>3.1 功能描述</h3>
+<p>脱敏引擎（MaskEngine）负责对文本中的敏感信息进行识别和掩码替换。采用<strong>正则表达式匹配 + 校验验证 + 掩码替换</strong>三步策略。</p>
+
+<h3>3.2 脱敏规则详细定义</h3>
+
+<h4>3.2.1 完整规则表</h4>
+<table>
+  <thead>
+    <tr><th>ID</th><th>类型</th><th>正则表达式</th><th>校验</th><th>脱敏规则</th><th>示例</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>R01</td><td>身份证号(18位)</td>
+      <td><span class="regex">[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx]</span></td>
+      <td>地区码+日期+校验位</td>
+      <td>前6+********+后4</td>
+      <td>110101********1234</td>
+    </tr>
+    <tr>
+      <td>R02</td><td>身份证号(15位)</td>
+      <td><span class="regex">[1-9]\d{5}\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}</span></td>
+      <td>地区码+日期</td>
+      <td>前6+******+后3</td>
+      <td>110101******123</td>
+    </tr>
+    <tr>
+      <td>R03</td><td>手机号</td>
+      <td><span class="regex">1[3-9]\d{9}</span></td>
+      <td>无</td>
+      <td>前3+****+后4</td>
+      <td>138****8888</td>
+    </tr>
+    <tr>
+      <td>R04</td><td>银行卡号</td>
+      <td><span class="regex">\b\d{16,19}\b</span></td>
+      <td>Luhn校验</td>
+      <td>前4+****+后4</td>
+      <td>6222****1234</td>
+    </tr>
+    <tr>
+      <td>R05</td><td>邮箱地址</td>
+      <td><span class="regex">[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}</span></td>
+      <td>无</td>
+      <td>首字符+***+@域名</td>
+      <td>a***@example.com</td>
+    </tr>
+    <tr>
+      <td>R06</td><td>IPv4地址</td>
+      <td><span class="regex">\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b</span></td>
+      <td>段值0-255</td>
+      <td>前两段+.*.*</td>
+      <td>192.168.*.*</td>
+    </tr>
+    <tr>
+      <td>R07</td><td>IPv6地址</td>
+      <td><span class="regex">(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}</span></td>
+      <td>无</td>
+      <td>前两组+:*</td>
+      <td>2001:db8::*</td>
+    </tr>
+    <tr>
+      <td>R08</td><td>护照号</td>
+      <td><span class="regex">[A-Za-z]\d{8}</span></td>
+      <td>无</td>
+      <td>前2+******</td>
+      <td>E1******</td>
+    </tr>
+    <tr>
+      <td>R09</td><td>车牌号</td>
+      <td><span class="regex">[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9]</span></td>
+      <td>省份+字母+5-6位</td>
+      <td>前2+****</td>
+      <td>京A****</td>
+    </tr>
+    <tr>
+      <td>R10</td><td>统一社会信用代码</td>
+      <td><span class="regex">[0-9A-HJ-NP-RTUWXY]{18}</span></td>
+      <td>无</td>
+      <td>前4+****+后4</td>
+      <td>9111****1234</td>
+    </tr>
+    <tr>
+      <td>R11</td><td>QQ号</td>
+      <td><span class="regex">[1-9]\d{4,10}</span></td>
+      <td>5-11位</td>
+      <td>前2+***+后2</td>
+      <td>12***89</td>
+    </tr>
+    <tr>
+      <td>R12</td><td>微信号</td>
+      <td><span class="regex">[a-zA-Z][a-zA-Z0-9_-]{5,19}</span></td>
+      <td>字母开头6-20位</td>
+      <td>全脱敏******</td>
+      <td>******</td>
+    </tr>
+    <tr>
+      <td>R13</td><td>设备IMEI号</td>
+      <td><span class="regex">\d{15}</span></td>
+      <td>15位数字</td>
+      <td>前3+***+后3</td>
+      <td>123***789</td>
+    </tr>
+    <tr>
+      <td>R14</td><td>军官证号</td>
+      <td><span class="regex">军字第\d{8}号</span></td>
+      <td>无</td>
+      <td>前3+******+后2</td>
+      <td>军字第******12</td>
+    </tr>
+    <tr>
+      <td>R15</td><td>社保卡号</td>
+      <td><span class="regex">[1-9]\d{14}(?:\d{3})?</span></td>
+      <td>15或18位</td>
+      <td>前4+****+后4</td>
+      <td>1234****5678</td>
+    </tr>
+    <tr>
+      <td>R16</td><td>港澳通行证号</td>
+      <td><span class="regex">[HMhm]\d{8}</span></td>
+      <td>无</td>
+      <td>前2+******</td>
+      <td>H1******</td>
+    </tr>
+    <tr>
+      <td>R17</td><td>台湾通行证号</td>
+      <td><span class="regex">[Tt]\d{8}</span></td>
+      <td>无</td>
+      <td>前2+******</td>
+      <td>T1******</td>
+    </tr>
+    <tr>
+      <td>R18</td><td>营业执照号</td>
+      <td><span class="regex">[0-9A-Za-z]{15,18}</span></td>
+      <td>结合上下文</td>
+      <td>前4+****+后4</td>
+      <td>9111****5678</td>
+    </tr>
+    <tr>
+      <td>R19</td><td>纳税识别号</td>
+      <td><span class="regex">[0-9A-Za-z]{15,20}</span></td>
+      <td>结合上下文</td>
+      <td>前4+****+后4</td>
+      <td>9111****5678</td>
+    </tr>
+    <tr>
+      <td>R20</td><td>公积金账号</td>
+      <td><span class="regex">\d{12,20}</span></td>
+      <td>结合上下文</td>
+      <td>前4+****+后4</td>
+      <td>1234****5678</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>3.2.2 规则优先级</h4>
+<p>为避免短模式错误匹配长模式中的子串，规则按以下优先级执行：</p>
+<div class="code-block">
+优先级从高到低:
+  1. R01 身份证号(18位)    — 最长最精确，优先匹配
+  2. R02 身份证号(15位)    — 长且含日期结构
+  3. R04 银行卡号          — 需Luhn校验，16-19位
+  4. R09 车牌号            — 含中文字符，特征明显
+  5. R10 统一社会信用代码   — 18位字母数字混合
+  6. R14 军官证号          — 含"军字第"特征
+  7. R16/R17 港澳台通行证  — 字母+8位数字
+  8. R08 护照号            — 字母+8位数字
+  9. R03 手机号            — 1[3-9]开头11位
+  10. R05 邮箱             — @符号特征明显
+  11. R06/R07 IP地址       — 点分隔特征
+  12. R15 社保卡号         — 纯数字15/18位
+  13. R13 IMEI号           — 15位纯数字
+  14. R11 QQ号             — 5-11位数字
+  15. R12 微信号           — 字母开头6-20位（误报率高，放最后）
+  16. R18-R20 其他证照号   — 结合上下文关键词判断
+</div>
+
+<div class="callout callout-warning">
+  <strong>误报控制策略：</strong>对于纯数字类规则（QQ号、IMEI、银行卡号等），通过以下方式降低误报率：
+  <ul>
+    <li>银行卡号使用 <strong>Luhn算法</strong> 校验，过滤非真实卡号的长数字串</li>
+    <li>身份证号使用 <strong>地区码+出生日期+校验位</strong> 三重验证</li>
+    <li>QQ号要求不在已有更长匹配（如手机号、身份证号）的范围内</li>
+    <li>微信号要求不以常见英文单词开头（维护白名单）</li>
+    <li>营业执照号/纳税识别号要求上下文含"营业执照""纳税"等关键词</li>
+  </ul>
+</div>
+
+<h3>3.3 脱敏引擎核心算法</h3>
+<div class="code-block">
+class MaskEngine:
+    """敏感信息脱敏引擎"""
+    
+    def __init__(self, rules: list[MaskRule]):
+        # 按优先级排序规则
+        self.rules = sorted(rules, key=lambda r: r.priority)
+        # 预编译正则
+        self.compiled = [(r.id, re.compile(r.pattern), r) for r in self.rules]
+    
+    async def mask(self, text: str) -> MaskResult:
+        """
+        对文本执行脱敏处理
+        返回: MaskResult(masked_text, masked_count, details)
+        """
+        if not text or not text.strip():
+            return MaskResult(text, 0, [])
+        
+        masked_text = text
+        details = []
+        masked_count = 0
+        
+        # 已被匹配的字符位置区间（避免重复匹配）
+        occupied = set()
+        
+        for rule_id, regex, rule in self.compiled:
+            for match in regex.finditer(masked_text):
+                start, end = match.start(), match.end()
+                
+                # 检查是否已被更高优先级的规则匹配
+                if any(i in occupied for i in range(start, end)):
+                    continue
+                
+                original = match.group()
+                
+                # 执行校验（如Luhn校验、身份证校验位校验）
+                if rule.validator and not rule.validator(original):
+                    continue
+                
+                # 执行掩码替换
+                masked_value = rule.mask_func(original)
+                
+                details.append(MaskDetail(
+                    rule_id=rule_id,
+                    type=rule.type_name,
+                    position=(start, end),
+                    original=original,    # 仅内存中保留，不写入日志
+                    masked=masked_value
+                ))
+                
+                # 标记区间已被占用
+                occupied.update(range(start, end))
+                masked_count += 1
+        
+        # 从后往前替换（避免位置偏移）
+        for detail in sorted(details, key=lambda d: d.position[0], reverse=True):
+            start, end = detail.position
+            masked_text = masked_text[:start] + detail.masked + masked_text[end:]
+        
+        return MaskResult(
+            masked_text=masked_text,
+            masked_count=masked_count,
+            details=details
+        )
+
+
+def luhn_check(card_number: str) -> bool:
+    """Luhn算法校验银行卡号"""
+    digits = [int(d) for d in card_number if d.isdigit()]
+    if len(digits) < 16:
+        return False
+    checksum = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        checksum += d
+    return checksum % 10 == 0
+
+
+def id_card_check(id_number: str) -> bool:
+    """身份证号校验位验证"""
+    if len(id_number) != 18:
+        return False
+    # 校验位权重
+    weights = [7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2]
+    check_codes = "10X98765432"
+    total = sum(int(id_number[i]) * weights[i] for i in range(17))
+    return id_number[17].upper() == check_codes[total % 11]
+</div>
+
+<h3>3.4 脱敏规则配置结构</h3>
+<div class="code-block">
+# config/mask_rules.yaml
+rules:
+  - id: R01
+    type: "身份证号(18位)"
+    pattern: "[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]"
+    priority: 1
+    validator: "id_card_check"
+    mask_strategy: "keep_prefix_suffix"
+    mask_params:
+      prefix_len: 6
+      suffix_len: 4
+      mask_char: "*"
+    enabled: true
+    
+  - id: R03
+    type: "手机号"
+    pattern: "1[3-9]\\d{9}"
+    priority: 9
+    validator: null
+    mask_strategy: "keep_prefix_suffix"
+    mask_params:
+      prefix_len: 3
+      suffix_len: 4
+      mask_char: "*"
+    enabled: true
+    
+  - id: R04
+    type: "银行卡号"
+    pattern: "\\b\\d{16,19}\\b"
+    priority: 3
+    validator: "luhn_check"
+    mask_strategy: "keep_prefix_suffix"
+    mask_params:
+      prefix_len: 4
+      suffix_len: 4
+      mask_char: "*"
+    enabled: true
+    
+  # ... 其余规则类似
+</div>
+
+<!-- ============ 第4章 ============ -->
+<h2 id="ch4">4. 语义安全检查模块详细设计</h2>
+
+<h3>4.1 功能描述</h3>
+<p>安全检查引擎（SafetyChecker）负责调用 <code>ynygljj/Unified_Prompt_Guard</code> 模型，对文本进行安全/不安全分类判定。</p>
+
+<h3>4.2 模型推理服务设计</h3>
+
+<h4>4.2.1 模型部署</h4>
+<div class="code-block">
+# 使用 vLLM 部署 Unified_Prompt_Guard 推理服务
+# 启动命令:
+python -m vllm.entrypoints.openai.api_server \
+    --model ynygljj/Unified_Prompt_Guard \
+    --port 8100 \
+    --gpu-memory-utilization 0.5 \
+    --max-model-len 4096 \
+    --dtype auto
+
+# 或使用 Transformers 直接加载:
+from transformers import pipeline
+classifier = pipeline(
+    "text-classification",
+    model="ynygljj/Unified_Prompt_Guard",
+    device=0  # GPU
+)
+result = classifier("待检测的文本")
+# result: [{'label': 'safe'/'unsafe', 'score': 0.98}]
+</div>
+
+<h4>4.2.2 推理接口设计</h4>
+<div class="code-block">
+class SafetyChecker:
+    """语义安全检查引擎"""
+    
+    def __init__(self, model_endpoint: str, threshold: float = 0.5, timeout: float = 3.0):
+        self.endpoint = model_endpoint  # vLLM服务地址
+        self.threshold = threshold      # 安全判定阈值
+        self.timeout = timeout          # 超时时间(秒)
+    
+    async def check(self, text: str) -> SafetyCheckResult:
+        """
+        对文本执行安全检查
+        返回: SafetyCheckResult(is_safe, confidence, label, error)
+        """
+        if not text or not text.strip():
+            # 空文本默认安全
+            return SafetyCheckResult(True, 0.0, "safe", None)
+        
         try:
-            async with sandbox(timeout=30):
-                result = await tool.execute(params)
-        except TimeoutError:
-            audit_log("TOOL_EXECUTION_TIMEOUT", tool_name, ctx)
-            return ToolResult.error("EXECUTION_TIMEOUT")
+            # 调用模型推理服务
+            result = await self._call_model(text)
+            
+            label = result["label"]        # "safe" or "unsafe"
+            score = result["score"]        # 0.0 ~ 1.0
+            
+            if label == "safe" and score >= self.threshold:
+                return SafetyCheckResult(True, score, "safe", None)
+            elif label == "unsafe" and score >= self.threshold:
+                return SafetyCheckResult(False, score, "unsafe", None)
+            else:
+                # 模型不确定（score < threshold），保守拦截
+                return SafetyCheckResult(False, score, "uncertain", 
+                                        "模型置信度低于阈值")
+                
+        except asyncio.TimeoutError:
+            # 超时 → Fail-Closed
+            return SafetyCheckResult(False, 0.0, "timeout",
+                                    "安全检查超时，按安全策略拦截")
+        except ModelUnavailableError:
+            # 模型不可用 → 降级处理
+            return SafetyCheckResult(False, 0.0, "unavailable",
+                                    "安全检查服务不可用")
+    
+    async def _call_model(self, text: str) -> dict:
+        """调用vLLM推理服务"""
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(
+                f"{self.endpoint}/v1/classify",
+                json={"text": text}
+            )
+            resp.raise_for_status()
+            return resp.json()
+</div>
 
-        # 8. 结果安全过滤
-        filtered = self.output_filter.filter(result)
+<h4>4.2.3 判定决策矩阵</h4>
+<table>
+  <thead>
+    <tr><th>模型输出</th><th>置信度</th><th>判定结果</th><th>处理动作</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>safe</td><td>≥ 阈值(0.5)</td><td>安全</td><td><span class="badge" style="background:#dcfce7;color:#16a34a">PASS 放行</span></td></tr>
+    <tr><td>safe</td><td>&lt; 阈值</td><td>不确定</td><td><span class="badge" style="background:#fee2e2;color:#dc2626">BLOCK 保守拦截</span></td></tr>
+    <tr><td>unsafe</td><td>≥ 阈值(0.5)</td><td>不安全</td><td><span class="badge" style="background:#fee2e2;color:#dc2626">BLOCK 拦截</span></td></tr>
+    <tr><td>unsafe</td><td>&lt; 阈值</td><td>不确定</td><td><span class="badge" style="background:#fee2e2;color:#dc2626">BLOCK 保守拦截</span></td></tr>
+    <tr><td>超时</td><td>-</td><td>检查失败</td><td><span class="badge" style="background:#fee2e2;color:#dc2626">BLOCK Fail-Closed</span></td></tr>
+    <tr><td>服务异常</td><td>-</td><td>检查失败</td><td>按降级策略处理</td></tr>
+  </tbody>
+</table>
 
-        # 9. 审计日志
-        audit_log("TOOL_EXECUTED", tool_name, ctx, result_summary(filtered))
+<h3>4.3 降级策略</h3>
+<table>
+  <thead>
+    <tr><th>降级模式</th><th>触发条件</th><th>行为</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Fail-Closed（默认）</td><td>模型不可用/超时</td><td>拦截所有请求，返回安全提示</td><td>高安全要求场景</td></tr>
+    <tr><td>Fail-Open</td><td>模型不可用/超时</td><td>仅执行脱敏后放行，跳过语义检查</td><td>低风险场景/灰度期</td></tr>
+    <tr><td>Only-Mask</td><td>手动配置</td><td>仅脱敏不检查，永久跳过语义检查</td><td>调试/测试场景</td></tr>
+  </tbody>
+</table>
 
-        return ToolResult.success(filtered)</code></pre>
+<h3>4.4 批量推理优化</h3>
+<div class="code-block">
+class BatchSafetyChecker(SafetyChecker):
+    """支持批量推理的安全检查器"""
+    
+    def __init__(self, *args, batch_size=32, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.batch_size = batch_size
+    
+    async def check_batch(self, texts: list[str]) -> list[SafetyCheckResult]:
+        """批量检查多段文本"""
+        results = []
+        for i in range(0, len(texts), self.batch_size):
+            batch = texts[i:i+self.batch_size]
+            batch_results = await self._call_model_batch(batch)
+            results.extend(batch_results)
+        return results
+    
+    async def _call_model_batch(self, texts: list[str]) -> list[SafetyCheckResult]:
+        """调用vLLM批量推理接口"""
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.post(
+                f"{self.endpoint}/v1/classify/batch",
+                json={"texts": texts}
+            )
+            data = resp.json()
+            return [
+                SafetyCheckResult(
+                    is_safe=(r["label"] == "safe" and r["score"] >= self.threshold),
+                    confidence=r["score"],
+                    label=r["label"],
+                    error=None
+                )
+                for r in data["results"]
+            ]
+</div>
 
-  <h3>11.4 Agent会话安全限制</h3>
-  <table>
-    <thead><tr><th>限制项</th><th>值</th><th>超限处理</th></tr></thead>
-    <tbody>
-      <tr><td>每轮最多调用工具数</td><td>5</td><td>截断，返回"已达到工具调用上限"</td></tr>
-      <tr><td>会话总调用次数</td><td>20</td><td>终止Agent模式，降级为普通对话</td></tr>
-      <tr><td>调用间隔</td><td>至少1秒</td><td>延迟下一次调用</td></tr>
-      <tr><td>单次执行超时</td><td>30秒</td><td>超时中断，返回错误</td></tr>
-      <tr><td>内存上限</td><td>512MB</td><td>OOMKilled，返回错误</td></tr>
-      <tr><td>CPU上限</td><td>1核</td><td>Throttle，不中断</td></tr>
-    </tbody>
-  </table>
-</section>
+<!-- ============ 第5章 ============ -->
+<h2 id="ch5">5. 数据结构设计</h2>
 
-<!-- SECTION 12: MultiModal -->
-<section id="s12">
-  <h2 class="section-title">十二、多模态安全模块详细设计</h2>
+<h3>5.1 核心数据结构</h3>
 
-  <h3>12.1 模块定义</h3>
-  <p><strong>模块名</strong>：<code>MMGuard</code> | 处理图片、音频、视频、文件等非文本输入的安全检查。</p>
+<div class="code-block">
+# ============ 请求/响应数据结构 ============
 
-  <h3>12.2 多模态输入处理管线</h3>
-  <pre><code>def process_multimodal_input(input_data, user_context):
-    result = {"text_segments": [], "media_segments": []}
+class ChatRequest(BaseModel):
+    """用户对话请求"""
+    prompt: str                          # 用户输入文本
+    model: str = "default"               # 指定后端大模型
+    config: Optional[RequestConfig] = None  # 可选配置覆盖
 
-    # ── 文本部分：走标准L2管线 ──
-    if input_data.text:
-        text_result = input_guard.process(input_data.text, user_context)
-        result["text_segments"].append(text_result)
+class RequestConfig(BaseModel):
+    """请求级配置"""
+    safety_threshold: float = 0.5       # 安全检查阈值
+    enable_mask: bool = True            # 是否启用脱敏
+    enable_check: bool = True           # 是否启用语义检查
 
-    # ── 媒体部分：逐文件处理 ──
-    for media_item in input_data.media:
-        # 1. 文件类型白名单
-        if media_item.type not in ALLOWED_MEDIA_TYPES:
-            raise SecurityError(f"UNSUPPORTED: {media_item.type}")
-        # 2. 文件大小校验
-        if media_item.size > MAX_FILE_SIZE[media_item.type]:
-            raise SecurityError("FILE_TOO_LARGE")
+class ChatResponse(BaseModel):
+    """对话响应"""
+    code: int                           # 0=成功, 403=拦截, 5xx=错误
+    message: str                        # 状态描述
+    data: ResponseData                  # 响应数据
 
-        # 3. 沙盒内处理
-        with sandbox(timeout=30):
-            handler = MEDIA_HANDLERS[media_item.type]
-            extracted = handler.extract(media_item)
-            # ImageHandler: OCR提取文字
-            # AudioHandler: ASR语音转文字
-            # VideoHandler: 抽帧 → 逐帧OCR
-            # FileHandler: 文档解析
+class ResponseData(BaseModel):
+    """响应数据体"""
+    response: str                       # 大模型回复（已脱敏）
+    safety: SafetyInfo                  # 安全检查信息
+    mask: Optional[MaskInfo] = None     # 脱敏信息
 
-        # 4. 提取的文字走输入防护管线
-        text_check = input_guard.process(extracted.text, user_context)
-        result["media_segments"].append({
-            "type": media_item.type,
-            "extracted_text": text_check.sanitized_text,
-            "risk_level": text_check.risk_level
-        })
+class SafetyInfo(BaseModel):
+    """安全检查结果"""
+    input_check: str                    # "pass" | "block"
+    input_confidence: float = 0.0       # 输入检查置信度
+    output_check: Optional[str] = None  # "pass" | "block"
+    output_confidence: Optional[float] = None
+    reason: Optional[str] = None        # 拦截原因
 
-        # 5. 图片/视频额外：内容审核（色情/暴力检测）
-        if media_item.type in ["image", "video_frame"]:
-            vision_check = vision_moderator.check(media_item)
-            if vision_check.is_unsafe:
-                raise SecurityError(f"UNSAFE_VISUAL: {vision_check.category}")
+class MaskInfo(BaseModel):
+    """脱敏结果摘要"""
+    input_masked_count: int = 0         # 输入侧脱敏数量
+    output_masked_count: int = 0        # 输出侧脱敏数量
 
-    return result</code></pre>
 
-  <h3>12.3 各模态处理规格</h3>
-  <table>
-    <thead><tr><th>模态</th><th>白名单类型</th><th>大小上限</th><th>提取方式</th><th>额外检查</th></tr></thead>
-    <tbody>
-      <tr><td>图片</td><td>JPG, PNG, GIF, WebP</td><td>20MB</td><td>OCR (PaddleOCR)</td><td>视觉内容审核（NSFW检测）</td></tr>
-      <tr><td>音频</td><td>WAV, MP3, AAC, OGG</td><td>50MB</td><td>ASR (Whisper)</td><td>—</td></tr>
-      <tr><td>视频</td><td>MP4, MOV, AVI, WebM</td><td>200MB</td><td>关键帧提取 → OCR</td><td>深伪检测模型 + NSFW</td></tr>
-      <tr><td>文件</td><td>PDF, TXT, DOCX, HTML, MD</td><td>50MB</td><td>对应解析器</td><td>文档安全性扫描</td></tr>
-    </tbody>
-  </table>
-</section>
+# ============ 内部数据结构 ============
 
-<!-- SECTION 13: DB -->
-<section id="s13">
-  <h2 class="section-title">十三、数据库设计</h2>
+class MaskRule(BaseModel):
+    """脱敏规则定义"""
+    id: str                             # 规则ID, 如 "R01"
+    type_name: str                      # 类型名称, 如 "身份证号"
+    pattern: str                        # 正则表达式
+    priority: int                       # 优先级(数字越小越高)
+    validator: Optional[str] = None     # 校验器名称
+    mask_strategy: str                  # 脱敏策略
+    mask_params: dict                   # 脱敏参数
+    enabled: bool = True
 
-  <h3>13.1 数据存储选型</h3>
-  <table>
-    <thead><tr><th>存储类型</th><th>技术选型</th><th>用途</th></tr></thead>
-    <tbody>
-      <tr><td>关系型数据库</td><td>PostgreSQL</td><td>用户信息、RBAC配置、Prompt版本、审计归档</td></tr>
-      <tr><td>缓存</td><td>Redis Cluster</td><td>会话上下文、速率限制计数器、IP黑名单、热点配置</td></tr>
-      <tr><td>日志存储</td><td>Elasticsearch</td><td>全链路审计日志、安全事件</td></tr>
-      <tr><td>消息队列</td><td>Kafka</td><td>日志采集管道、告警事件流</td></tr>
-      <tr><td>向量数据库</td><td>Milvus</td><td>RAG场景文档向量存储</td></tr>
-      <tr><td>配置中心</td><td>etcd</td><td>安全规则、配置热更新</td></tr>
-    </tbody>
-  </table>
+class MaskResult(BaseModel):
+    """脱敏结果"""
+    masked_text: str                    # 脱敏后文本
+    masked_count: int                   # 脱敏数量
+    details: list[MaskDetail]           # 脱敏详情
 
-  <h3>13.2 核心表结构（PostgreSQL）</h3>
-  <pre><code>-- 安全事件表
-CREATE TABLE security_events (
-    id              BIGSERIAL PRIMARY KEY,
-    trace_id        UUID NOT NULL,
-    event_type      VARCHAR(50) NOT NULL,     -- INJECTION_DETECTED, JAILBREAK_DETECTED...
-    risk_level      VARCHAR(10) NOT NULL,     -- green/yellow/red/critical
-    layer           VARCHAR(10) NOT NULL,     -- L1-L7
-    rule_id         VARCHAR(50),
-    user_hash       VARCHAR(64),
-    session_id      UUID,
-    details         JSONB,
-    created_at      TIMESTAMPTZ DEFAULT NOW()
-);
+class MaskDetail(BaseModel):
+    """单次脱敏详情"""
+    rule_id: str                        # 规则ID
+    type: str                           # 敏感信息类型
+    position: tuple[int, int]           # 在原文中的位置
+    original: str                       # 原始值（仅内存，不落盘）
+    masked: str                         # 脱敏后值
 
-CREATE INDEX idx_se_trace ON security_events(trace_id);
-CREATE INDEX idx_se_risk ON security_events(risk_level, created_at);
-CREATE INDEX idx_se_type ON security_events(event_type, created_at);
+class SafetyCheckResult(BaseModel):
+    """安全检查结果"""
+    is_safe: bool                       # 是否安全
+    confidence: float                   # 置信度
+    label: str                          # "safe"|"unsafe"|"timeout"|"unavailable"
+    error: Optional[str] = None         # 错误信息
 
--- Prompt版本表
-CREATE TABLE prompt_versions (
-    id              SERIAL PRIMARY KEY,
-    role            VARCHAR(20) NOT NULL,
-    scenario        VARCHAR(50) NOT NULL,
-    version         VARCHAR(20) NOT NULL,
-    content         TEXT NOT NULL,
-    content_hash    VARCHAR(64) NOT NULL,
-    change_log      JSONB,
-    review_status   VARCHAR(20) DEFAULT 'draft',
-    reviewer        VARCHAR(50),
-    created_at      TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(role, scenario, version)
-);
 
--- 工具注册表
-CREATE TABLE tool_registry (
-    id              SERIAL PRIMARY KEY,
-    name            VARCHAR(100) UNIQUE NOT NULL,
-    auth_level      VARCHAR(20) NOT NULL,     -- public/employee/restricted/admin
-    params_schema   JSONB NOT NULL,
-    rate_limit      JSONB,
-    requires_approval BOOLEAN DEFAULT FALSE,
-    requires_mfa    BOOLEAN DEFAULT FALSE,
-    enabled         BOOLEAN DEFAULT TRUE,
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
-);</code></pre>
+# ============ 日志数据结构 ============
 
-  <h3>13.3 Redis数据结构设计</h3>
-  <table>
-    <thead><tr><th>Key Pattern</th><th>数据类型</th><th>TTL</th><th>用途</th></tr></thead>
-    <tbody>
-      <tr><td><code>session:{session_id}</code></td><td>Hash</td><td>30min</td><td>会话上下文数据</td></tr>
-      <tr><td><code>rate:{user_hash}:{endpoint}</code></td><td>Sorted Set</td><td>1min</td><td>速率限制计数器</td></tr>
-      <tr><td><code>blacklist:ip:{ip}</code></td><td>String</td><td>动态</td><td>IP黑名单（值=封禁到期时间戳）</td></tr>
-      <tr><td><code>blacklist:user:{user_hash}</code></td><td>String</td><td>动态</td><td>用户黑名单</td></tr>
-      <tr><td><code>config:rules:l2_keywords</code></td><td>List</td><td>永久</td><td>L2注入关键词（热更新）</td></tr>
-      <tr><td><code>config:rules:l2_patterns</code></td><td>List</td><td>永久</td><td>L2正则模式（热更新）</td></tr>
-      <tr><td><code>config:rules:l5_output</code></td><td>Hash</td><td>永久</td><td>L5输出审核规则</td></tr>
-    </tbody>
-  </table>
-</section>
+class SafetyLogEntry(BaseModel):
+    """安全日志条目"""
+    timestamp: str                      # 时间戳
+    request_id: str                     # 请求ID
+    direction: str                      # "input"|"output"
+    action: str                         # "pass"|"block"
+    mask_count: int                     # 脱敏数量
+    mask_types: list[str]               # 脱敏类型列表
+    safety_label: str                   # 模型判定标签
+    safety_confidence: float            # 模型置信度
+    text_length: int                    # 文本长度
+    text_preview: str                   # 文本预览（前100字符，已脱敏）
+</div>
 
-<!-- SECTION 14: Config -->
-<section id="s14">
-  <h2 class="section-title">十四、配置管理中心详细设计</h2>
+<h3>5.2 日志存储设计</h3>
+<table>
+  <thead>
+    <tr><th>存储</th><th>用途</th><th>保留策略</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>JSON日志文件</td><td>所有安全事件原始日志</td><td>30天滚动</td></tr>
+    <tr><td>Redis</td><td>实时统计数据（拦截率、脱敏率等）</td><td>7天TTL</td></tr>
+    <tr><td>ELK / Loki</td><td>日志检索和分析</td><td>90天</td></tr>
+  </tbody>
+</table>
 
-  <h3>14.1 配置分层架构</h3>
-  <div class="flow-diagram">
-┌─────────────────────────────────────────────────────────┐
-│  ConfigCenter (etcd)                                     │
-│                                                         │
-│  /ai-security/                                          │
-│  ├── /v1/                                               │
-│  │   ├── /input/                                        │
-│  │   │   ├── keywords.yaml        (L2 关键词黑名单)     │
-│  │   │   ├── patterns.yaml        (L2 正则模式)        │
-│  │   │   ├── obfuscation.yaml     (L2 混淆检测阈值)     │
-│  │   │   └── classification.yaml   (L2 分类模型配置)    │
-│  │   ├── /prompt/                                        │
-│  │   │   ├── templates/           (L3 Prompt模板)       │
-│  │   │   └── assembly.yaml        (L3 组装规则)         │
-│  │   ├── /inference/                                     │
-│  │   │   └── security.yaml        (L4 推理安全参数)     │
-│  │   ├── /output/                                        │
-│  │   │   ├── rules.yaml           (L5 输出规则)        │
-│  │   │   └── pii_masking.yaml     (L5 脱敏规则)        │
-│  │   ├── /session/                                       │
-│  │   │   └── policy.yaml          (L6 会话策略)         │
-│  │   ├── /alerting/                                      │
-│  │   │   └── rules.yaml           (L7 告警规则)         │
-│  │   └── /compliance/                                    │
-│  │       └── policy.yaml          (合规策略)             │
-│  └── /v2/    (下一代配置，灰度使用)                        │
-└─────────────────────────────────────────────────────────┘</code></pre>
+<!-- ============ 第6章 ============ -->
+<h2 id="ch6">6. 接口详细设计</h2>
 
-  <h3>14.2 配置热更新机制</h3>
-  <table>
-    <thead><tr><th>配置类型</th><th>更新方式</th><th>生效时间</th></tr></thead>
-    <tbody>
-      <tr><td>关键词/模式规则</td><td>etcd Watch → 内存热加载</td><td>≤ 5秒</td></tr>
-      <tr><td>Prompt模板</td><td>etcd Watch → 模板重新编译</td><td>≤ 10秒</td></tr>
-      <tr><td>推理参数</td><td>etcd Watch → SDK配置刷新</td><td>≤ 10秒</td></tr>
-      <tr><td>告警规则</td><td>etcd Watch → Flink Job动态更新</td><td>≤ 30秒</td></tr>
-      <tr><td>合规策略</td><td>人工审批 → 配置推送</td><td>审批周期（1-2天）</td></tr>
-    </tbody>
-  </table>
+<h3>6.1 对话接口</h3>
+<table>
+  <thead>
+    <tr><th>项目</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>路径</td><td><code class="code-inline">POST /api/v1/chat</code></td></tr>
+    <tr><td>Content-Type</td><td>application/json</td></tr>
+    <tr><td>认证</td><td>Bearer Token（API Key）</td></tr>
+    <tr><td>请求体</td><td>ChatRequest</td></tr>
+    <tr><td>响应体</td><td>ChatResponse</td></tr>
+    <tr><td>超时</td><td>30秒（含大模型响应时间）</td></tr>
+  </tbody>
+</table>
 
-  <h3>14.3 配置变更审批流程</h3>
-  <div class="flow-diagram">
-开发者提交PR → 安全团队Code Review → 自动化测试（回归测试套件）
-  → 预发布环境验证（灰度量1%流量） → 安全负责人审批
-  → 全量发布（通过etcd推送） → 监控指标（观察30分钟无异常）
-  → 关闭变更工单</code></pre></div>
-</section>
+<h4>请求示例</h4>
+<div class="code-block">
+POST /api/v1/chat
+Authorization: Bearer sk-xxxx
+Content-Type: application/json
 
-<!-- SECTION 15: Deploy -->
-<section id="s15">
-  <h2 class="section-title">十五、部署架构</h2>
+{
+  "prompt": "请帮我分析这段文字：张三的手机号是13812345678，身份证号是110101199001011234",
+  "model": "gpt-4"
+}
+</div>
 
-  <h3>15.1 生产环境拓扑</h3>
-  <div class="flow-diagram">
-                        ┌─────────────┐
-                        │   CDN/WAF   │  (Cloudflare / 腾讯云WAF)
-                        └──────┬──────┘
-                               │
-                        ┌──────▼──────┐
-                        │  LoadBalancer│  (Nginx / CLB)
-                        └──────┬──────┘
-                               │
-              ┌────────────────┼────────────────┐
-              ▼                ▼                ▼
-     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
-     │  Gateway-1  │  │  Gateway-2  │  │  Gateway-N  │  (Kong × N)
-     │  (L1 Guard) │  │  (L1 Guard) │  │  (L1 Guard) │
-     └──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-            │                │                │
-            └────────────────┼────────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-     ┌─────────────┐ ┌────────────┐ ┌─────────────┐
-     │ InputGuard  │ │ PromptEng  │ │ SessionMgr  │  (微服务 × 2-4)
-     │  (L2)       │ │   (L3)     │ │    (L6)     │
-     └──────┬──────┘ └─────┬──────┘ └──────┬──────┘
-            │              │               │
-            └──────────────┼───────────────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-     ┌─────────────┐ ┌──────────┐ ┌─────────────┐
-     │ LLM Service │ │OutputGrd │ │ AuditLogger │  (核心服务)
-     │   (L4)      │ │  (L5)    │ │    (L7)     │
-     └─────────────┘ └──────────┘ └──────┬──────┘
-                                         │
-              ┌───────────────────────────┼───────────┐
-              ▼              ▼            ▼           ▼
-     ┌──────────┐   ┌──────────┐  ┌──────────┐ ┌──────────┐
-     │PostgreSQL│   │  Redis   │  │   Kafka  │ │Elasticsearch│
-     └──────────┘   └──────────┘  └──────────┘ └──────────┘</code></pre></div>
+<h4>响应示例（正常）</h4>
+<div class="code-block">
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "response": "根据您提供的信息，张三的手机号是138****5678，身份证号是110101********1234...",
+    "safety": {
+      "input_check": "pass",
+      "input_confidence": 0.03,
+      "output_check": "pass",
+      "output_confidence": 0.01
+    },
+    "mask": {
+      "input_masked_count": 2,
+      "output_masked_count": 2
+    }
+  }
+}
+</div>
 
-  <h3>15.2 容器化部署规格</h3>
-  <table>
-    <thead><tr><th>服务</th><th>副本数</th><th>CPU</th><th>内存</th><th>HPA</th></tr></thead>
-    <tbody>
-      <tr><td>Gateway (L1)</td><td>3</td><td>2核</td><td>4GB</td><td>CPU &gt;70%</td></tr>
-      <tr><td>InputGuard (L2)</td><td>4</td><td>4核</td><td>8GB</td><td>CPU &gt;60% + QPS &gt;500</td></tr>
-      <tr><td>PromptEngine (L3)</td><td>2</td><td>1核</td><td>2GB</td><td>—</td></tr>
-      <tr><td>InferenceAdapter (L4)</td><td>2-8</td><td>依GPU而定</td><td>8-32GB</td><td>GPU &gt;60%</td></tr>
-      <tr><td>OutputGuard (L5)</td><td>4</td><td>4核</td><td>8GB</td><td>CPU &gt;60%</td></tr>
-      <tr><td>SessionManager (L6)</td><td>3</td><td>2核</td><td>4GB</td><td>CPU &gt;70%</td></tr>
-      <tr><td>AuditLogger (L7)</td><td>2</td><td>2核</td><td>4GB</td><td>—</td></tr>
-    </tbody>
-  </table>
+<h4>响应示例（输入被拦截）</h4>
+<div class="code-block">
+{
+  "code": 403,
+  "message": "输入内容未通过安全检查",
+  "data": {
+    "response": "您的输入包含不安全内容，请修改后重试。",
+    "safety": {
+      "input_check": "block",
+      "input_confidence": 0.92,
+      "reason": "检测到Prompt注入攻击"
+    }
+  }
+}
+</div>
 
-  <h3>15.3 灰度发布策略</h3>
-  <table>
-    <thead><tr><th>阶段</th><th>流量比例</th><th>持续时间</th><th>监控重点</th></tr></thead>
-    <tbody>
-      <tr><td>Canary</td><td>1%</td><td>30分钟</td><td>拦截率异常、延迟抖动、错误率</td></tr>
-      <tr><td>扩大灰度</td><td>10%</td><td>2小时</td><td>拦截率环比、告警触发量</td></tr>
-      <tr><td>半量</td><td>50%</td><td>4小时</td><td>A/B对比：安全指标 + 业务指标</td></tr>
-      <tr><td>全量</td><td>100%</td><td>—</td><td>持续观察24小时</td></tr>
-    </tbody>
-  </table>
+<h3>6.2 脱敏预览接口</h3>
+<table>
+  <thead>
+    <tr><th>项目</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>路径</td><td><code class="code-inline">POST /api/v1/mask/preview</code></td></tr>
+    <tr><td>功能</td><td>仅执行脱敏，返回脱敏结果，不调用大模型</td></tr>
+    <tr><td>请求体</td><td><code class="code-inline">{"text": "待脱敏文本"}</code></td></tr>
+  </tbody>
+</table>
 
-  <div class="alert alert-info">
-    <div class="alert-title">灰度回滚条件</div>
-    任意阶段出现以下情况之一，立即回滚：拦截率偏差 &gt; ±30%、P95延迟增加 &gt; 50%、5xx错误率 &gt; 1%、触发P0告警。
-  </div>
-</section>
+<h4>响应示例</h4>
+<div class="code-block">
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "masked_text": "张三的手机号是138****5678，身份证号是110101********1234",
+    "masked_count": 2,
+    "details": [
+      {"type": "手机号", "masked": "138****5678"},
+      {"type": "身份证号(18位)", "masked": "110101********1234"}
+    ]
+  }
+}
+</div>
 
-</div><!-- /container -->
+<h3>6.3 安全检查预览接口</h3>
+<table>
+  <thead>
+    <tr><th>项目</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>路径</td><td><code class="code-inline">POST /api/v1/check/preview</code></td></tr>
+    <tr><td>功能</td><td>仅执行安全检查，返回判定结果，不调用大模型</td></tr>
+    <tr><td>请求体</td><td><code class="code-inline">{"text": "待检查文本"}</code></td></tr>
+  </tbody>
+</table>
 
-<a href="#toc" class="back-to-top" title="返回目录">&#8593;</a>
+<h4>响应示例</h4>
+<div class="code-block">
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "is_safe": false,
+    "label": "unsafe",
+    "confidence": 0.87,
+    "action": "BLOCK"
+  }
+}
+</div>
 
-<footer>
-  <p>AI大模型Prompt安全防护系统 — 详细设计说明书 v1.0.0</p>
-  <p>机密文件，仅限授权人员查阅。Copyright &copy; 2026 AI安全团队</p>
-</footer>
+<h3>6.4 健康检查接口</h3>
+<div class="code-block">
+GET /health
 
+响应:
+{
+  "status": "healthy",
+  "components": {
+    "gateway": "up",
+    "mask_engine": "up",
+    "safety_checker": "up",
+    "llm_proxy": "up"
+  },
+  "model_info": {
+    "name": "ynygljj/Unified_Prompt_Guard",
+    "loaded": true,
+    "gpu_available": true
+  }
+}
+</div>
+
+<!-- ============ 第7章 ============ -->
+<h2 id="ch7">7. 配置设计</h2>
+
+<h3>7.1 全局配置文件</h3>
+<div class="code-block">
+# config/settings.yaml
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  timeout: 30            # 请求超时(秒)
+
+# 安全检查配置
+safety:
+  model_name: "ynygljj/Unified_Prompt_Guard"
+  model_endpoint: "http://localhost:8100"   # vLLM服务地址
+  threshold: 0.5          # 安全判定阈值
+  timeout: 3.0            # 推理超时(秒)
+  degradation: "fail_closed"  # fail_closed | fail_open | only_mask
+  batch_size: 32          # 批量推理大小
+
+# 脱敏配置
+mask:
+  rules_file: "config/mask_rules.yaml"
+  enabled: true
+  
+# 大模型代理配置
+llm:
+  endpoint: "https://api.openai.com/v1"
+  api_key: "${LLM_API_KEY}"     # 环境变量注入
+  model: "gpt-4"
+  timeout: 20
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "/var/log/safety-gateway/app.log"
+  max_size: "100MB"
+  backup_count: 7
+  mask_in_log: true       # 日志中脱敏
+
+# Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+
+# 限流配置
+rate_limit:
+  global_qps: 200
+  per_ip_qps: 20
+  max_text_length: 32768  # tokens
+</div>
+
+<h3>7.2 配置热更新</h3>
+<p>脱敏规则支持热更新，无需重启服务：</p>
+<div class="code-block">
+# 脱敏规则热更新流程:
+1. 修改 config/mask_rules.yaml
+2. POST /api/v1/admin/rules/reload
+3. 网关重新加载规则文件，预编译正则
+4. 新规则立即生效（对后续请求生效）
+5. 返回加载结果（成功/失败 + 规则数量）
+
+# 安全阈值热更新:
+POST /api/v1/admin/config
+{
+  "safety.threshold": 0.6,
+  "safety.degradation": "fail_open"
+}
+</div>
+
+<!-- ============ 第8章 ============ -->
+<h2 id="ch8">8. 部署设计</h2>
+
+<h3>8.1 Docker部署</h3>
+<div class="code-block">
+# Dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8080
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+
+
+# docker-compose.yml
+version: "3.8"
+services:
+  safety-gateway:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+
+  vllm-server:
+    image: vllm/vllm-openai:latest
+    command: --model ynygljj/Unified_Prompt_Guard --port 8100
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./models:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  nginx:
+    image: nginx:1.24-alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./certs:/etc/nginx/certs
+    depends_on:
+      - safety-gateway
+</div>
+
+<h3>8.2 目录结构</h3>
+<div class="code-block">
+safety-gateway/
+├── app/
+│   ├── main.py                 # FastAPI 应用入口
+│   ├── routers/
+│   │   ├── chat.py             # 对话接口路由
+│   │   ├── mask.py             # 脱敏预览路由
+│   │   ├── check.py            # 安全检查预览路由
+│   │   └── admin.py            # 管理接口路由
+│   ├── services/
+│   │   ├── gateway_service.py  # 安全网关核心逻辑
+│   │   ├── mask_engine.py      # 脱敏引擎
+│   │   ├── safety_checker.py   # 安全检查引擎
+│   │   └── llm_proxy.py        # 大模型代理
+│   ├── models/
+│   │   ├── schemas.py          # Pydantic 数据模型
+│   │   └── mask_rule.py        # 脱敏规则模型
+│   ├── validators/
+│   │   ├── luhn.py             # Luhn校验
+│   │   └── id_card.py          # 身份证校验
+│   ├── utils/
+│   │   ├── logger.py           # 日志工具
+│   │   └── limiter.py          # 限流工具
+│   └── config.py               # 配置加载
+├── config/
+│   ├── settings.yaml           # 全局配置
+│   └── mask_rules.yaml         # 脱敏规则配置
+├── tests/
+│   ├── test_mask_engine.py     # 脱敏引擎测试
+│   ├── test_safety_checker.py  # 安全检查测试
+│   └── test_gateway.py         # 网关集成测试
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
+</div>
+
+<h3>8.3 依赖清单</h3>
+<table>
+  <thead>
+    <tr><th>依赖包</th><th>版本</th><th>用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>fastapi</td><td>0.110+</td><td>Web框架</td></tr>
+    <tr><td>uvicorn</td><td>0.29+</td><td>ASGI服务器</td></tr>
+    <tr><td>httpx</td><td>0.27+</td><td>异步HTTP客户端</td></tr>
+    <tr><td>pydantic</td><td>2.6+</td><td>数据模型校验</td></tr>
+    <tr><td>redis</td><td>5.0+</td><td>Redis客户端</td></tr>
+    <tr><td>structlog</td><td>24.1+</td><td>结构化日志</td></tr>
+    <tr><td>pyyaml</td><td>6.0+</td><td>配置文件解析</td></tr>
+    <tr><td>vllm</td><td>0.5+</td><td>模型推理（独立服务）</td></tr>
+    <tr><td>transformers</td><td>4.40+</td><td>模型加载（备选）</td></tr>
+    <tr><td>torch</td><td>2.2+</td><td>深度学习框架</td></tr>
+  </tbody>
+</table>
+
+</div>
 </body>
 </html>

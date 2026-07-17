@@ -1,32 +1,12 @@
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+import uvicorn
 
 from app.config import settings
-from app.api.router import api_router
+from app.api import app
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-
-
-app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    description=settings.app_description,
-    lifespan=lifespan
-)
-
-app.include_router(api_router, prefix="/api/v1")
-
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "version": settings.app_version}
-
-
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
+if __name__ == "__main__":
+    uvicorn.run(
+        "app.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG
+    )
