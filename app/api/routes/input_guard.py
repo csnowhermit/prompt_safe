@@ -1,8 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.api.dependencies import get_current_user
 from app.schemas.input_guard import InputGuardRequest, InputGuardResponse
 from app.services.input_guard import InputGuardService
 from app.services.audit_logger import AuditLoggerService
@@ -14,7 +13,7 @@ audit_logger = AuditLoggerService()
 
 
 @router.post("/check", response_model=InputGuardResponse)
-async def check_input(request: InputGuardRequest, current_user: dict = Depends(get_current_user)):
+async def check_input(request: InputGuardRequest):
     trace_id = UUID(request.trace_id) if request.trace_id else None
     session_id = UUID(request.session_id) if request.session_id else None
 

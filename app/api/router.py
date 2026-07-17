@@ -1,10 +1,8 @@
 from fastapi import APIRouter
 
-from app.api.routes import auth, chat, input_guard, output_guard, session, audit, rag, agent, mm_guard
+from app.api.routes import chat, input_guard, output_guard, session, audit, rag, agent, mm_guard
 
 api_router = APIRouter()
-
-api_router.include_router(auth.router, prefix="/auth", tags=["认证"])
 api_router.include_router(chat.router, prefix="/chat", tags=["聊天"])
 api_router.include_router(input_guard.router, prefix="/guard/input", tags=["输入防护"])
 api_router.include_router(output_guard.router, prefix="/guard/output", tags=["输出防护"])

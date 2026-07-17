@@ -1,9 +1,8 @@
 import time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.api.dependencies import get_current_user
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.input_guard import InputGuardService
 from app.services.output_guard import OutputGuardService
@@ -23,7 +22,7 @@ audit_logger = AuditLoggerService()
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(request: ChatRequest, current_user: dict = Depends(get_current_user)):
+async def chat(request: ChatRequest):
     start_time = time.time()
 
     if not request.session_id:

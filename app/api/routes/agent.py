@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from app.api.dependencies import get_current_user
 from app.schemas.tool import ToolExecutionRequest, ToolExecutionResponse
 from app.services.agent_wrapper import AgentSafeWrapperService
 
@@ -10,7 +9,7 @@ agent_wrapper = AgentSafeWrapperService()
 
 
 @router.post("/execute", response_model=ToolExecutionResponse)
-async def execute_tool(request: ToolExecutionRequest, current_user: dict = Depends(get_current_user)):
+async def execute_tool(request: ToolExecutionRequest):
     result = await agent_wrapper.execute(
         request.tool_name,
         request.params,
@@ -22,5 +21,5 @@ async def execute_tool(request: ToolExecutionRequest, current_user: dict = Depen
 
 
 @router.get("/tools")
-async def list_tools(current_user: dict = Depends(get_current_user)):
+async def list_tools():
     return {"tools": agent_wrapper.list_tools()}

@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.api.dependencies import get_current_user
 from app.schemas.output_guard import OutputGuardRequest, OutputGuardResponse
 from app.services.output_guard import OutputGuardService
 from app.services.audit_logger import AuditLoggerService
@@ -12,7 +11,7 @@ audit_logger = AuditLoggerService()
 
 
 @router.post("/check", response_model=OutputGuardResponse)
-async def check_output(request: OutputGuardRequest, current_user: dict = Depends(get_current_user)):
+async def check_output(request: OutputGuardRequest):
     result = await output_guard.check(
         request.raw_output,
         context=request.context or {}

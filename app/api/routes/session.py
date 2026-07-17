@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from app.api.dependencies import get_current_user, require_role
 from app.schemas.session import SessionCreate, SessionResponse, SessionListResponse
 from app.services.session_manager import SessionManagerService
 
@@ -10,7 +9,7 @@ session_manager = SessionManagerService()
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session(request: SessionCreate, current_user: dict = Depends(get_current_user)):
+async def create_session(request: SessionCreate):
     session_id = await session_manager.create_session(request.user_id, request.role)
     session_data = await session_manager.get_session(session_id)
     if not session_data:
@@ -19,7 +18,7 @@ async def create_session(request: SessionCreate, current_user: dict = Depends(ge
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
-async def get_session(session_id: str, current_user: dict = Depends(get_current_user)):
+async def get_session(session_id: str):
     session_data = await session_manager.get_session(session_id)
     if not session_data:
         raise HTTPException(status_code=404, detail="会话不存在")
@@ -27,7 +26,7 @@ async def get_session(session_id: str, current_user: dict = Depends(get_current_
 
 
 @router.delete("/{session_id}")
-async def terminate_session(session_id: str, current_user: dict = Depends(get_current_user)):
+async def terminate_session(session_id: str):
     success = await session_manager.terminate_session(session_id)
     if not success:
         raise HTTPException(status_code=404, detail="会话不存在")
@@ -35,6 +34,6 @@ async def terminate_session(session_id: str, current_user: dict = Depends(get_cu
 
 
 @router.get("/user/{user_id}", response_model=SessionListResponse)
-async def get_user_sessions(user_id: str, current_user: dict = Depends(require_role("admin"))):
+async def get_user_sessions(user_id: str):
     sessions = await session_manager.get_user_sessions(user_id)
     return {"sessions": sessions, "total": len(sessions)}
